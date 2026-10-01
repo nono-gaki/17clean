@@ -104,6 +104,27 @@ img{max-width:100%;}
 .compare .cmp-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;
   color:var(--ink-dim);font-size:11.5px;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface-2);}
 
+.gallery{position:relative;width:100%;height:210px;border-radius:12px;overflow:hidden;background:var(--surface-2);}
+.gallery.gal-contain{height:min(58vh,520px);}
+.gallery .gal-track{display:flex;height:100%;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;}
+.gallery .gal-track::-webkit-scrollbar{display:none;}
+.gallery .gal-track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:start;scroll-snap-stop:always;display:block;}
+.gallery.gal-contain .gal-track img{object-fit:contain;}
+.gallery .gal-count{position:absolute;top:8px;right:8px;padding:3px 8px;font:600 10.5px/1 var(--font-mono);letter-spacing:.04em;
+  border-radius:999px;background:rgba(10,16,24,.62);color:#fff;pointer-events:none;}
+.gallery .gal-nav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;
+  background:rgba(10,16,24,.55);color:#fff;border:none;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;}
+.gallery .gal-prev{left:8px;}
+.gallery .gal-next{right:8px;}
+.gallery .gal-dots{position:absolute;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:5px;pointer-events:none;}
+.gallery .gal-dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);}
+.gallery .gal-dots span.is-active{background:#fff;}
+
+.item-section + .item-section{margin-top:22px;}
+.item-section-title{font-size:13px;font-weight:700;color:var(--ink-dim);letter-spacing:.02em;margin:18px 0 10px;
+  padding-bottom:6px;border-bottom:1px solid var(--line);}
+.item-section:first-child .item-section-title{margin-top:0;}
+
 .item-foot{display:flex;align-items:center;justify-content:space-between;margin-top:9px;}
 .hint{font-size:11.5px;color:var(--ink-dim);}
 .expand-btn{background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0;}
@@ -206,6 +227,11 @@ img{max-width:100%;}
     if(m) return "https://drive.google.com/thumbnail?id=" + m[1] + "&sz=w1000";
     if(/^https?:\/\//.test(url)) return url;
     return null;
+  }
+
+  function parsePhotos(item){
+    var raw = item.photo_urls || "";
+    return raw.split(/[,\n]/).map(function(s){ return driveImg(s); }).filter(Boolean);
   }
 
   function esc(s){
@@ -350,38 +376,93 @@ img{max-width:100%;}
   }
 
   function filterItems(cat){
-    itemListEl.querySelectorAll(".item-card").forEach(function(card){
-      card.hidden = !(cat==="all" || card.getAttribute("data-cat")===cat);
+    itemListEl.querySelectorAll(".item-section").forEach(function(section){
+      var anyVisible = false;
+      section.querySelectorAll(".item-card").forEach(function(card){
+        var show = (cat==="all" || card.getAttribute("data-cat")===cat);
+        card.hidden = !show;
+        if(show) anyVisible = true;
+      });
+      section.hidden = !anyVisible;
     });
   }
 
-  function compareMarkup(item, extraClass){
-    var before = driveImg(item.before_photo_url);
-    var after = driveImg(item.after_photo_url);
-    if(!before && !after){
+  // photos.length === 2 → Before/After compare slider (the common case).
+  // photos.length === 0 → placeholder. Anything else → swipeable gallery.
+  function mediaMarkup(item, extraClass, mode){
+    var photos = parsePhotos(item);
+    var name = esc(item.item_name);
+
+    if(photos.length === 0){
       return '<div class="compare '+(extraClass||'')+'"><div class="cmp-placeholder">写真未登録</div></div>';
     }
-    if(!before){
-      return '<div class="compare '+(extraClass||'')+'">'+
-          '<img src="'+esc(after)+'" alt="'+esc(item.item_name)+' After" loading="lazy">'+
-          '<span class="cmp-tag cmp-tag--after">AFTER</span>'+
-        '</div>'+
-        '<div class="compare" style="margin-top:8px;height:64px;"><div class="cmp-placeholder">Before（実施前に撮影予定）</div></div>';
+
+    if(photos.length === 2){
+      return '<div class="compare '+(extraClass||'')+'" data-before="1">'+
+        '<img class="cmp-before" src="'+esc(photos[0])+'" alt="'+name+' Before" loading="lazy">'+
+        '<img class="cmp-after" src="'+esc(photos[1])+'" alt="'+name+' After" loading="lazy">'+
+        '<input class="cmp-range" type="range" min="0" max="100" value="50" aria-label="Before After 比較">'+
+        '<div class="cmp-handle"></div>'+
+        '<span class="cmp-tag cmp-tag--before">BEFORE</span>'+
+        '<span class="cmp-tag cmp-tag--after">AFTER</span>'+
+      '</div>';
     }
-    if(!after){
-      return '<div class="compare '+(extraClass||'')+'">'+
-          '<img src="'+esc(before)+'" alt="'+esc(item.item_name)+' Before" loading="lazy">'+
-          '<span class="cmp-tag cmp-tag--before">BEFORE</span>'+
-        '</div>';
+
+    var contain = mode === "lightbox";
+
+    if(photos.length === 1){
+      return '<div class="compare '+(contain?'cmp-contain':'')+'">'+
+        '<img src="'+esc(photos[0])+'" alt="'+name+'" loading="lazy"></div>';
     }
-    return '<div class="compare '+(extraClass||'')+'" data-before="1">'+
-      '<img class="cmp-before" src="'+esc(before)+'" alt="'+esc(item.item_name)+' Before" loading="lazy">'+
-      '<img class="cmp-after" src="'+esc(after)+'" alt="'+esc(item.item_name)+' After" loading="lazy">'+
-      '<input class="cmp-range" type="range" min="0" max="100" value="50" aria-label="Before After 比較">'+
-      '<div class="cmp-handle"></div>'+
-      '<span class="cmp-tag cmp-tag--before">BEFORE</span>'+
-      '<span class="cmp-tag cmp-tag--after">AFTER</span>'+
+
+    // 3+: swipeable gallery with nav arrows + dots (scroll-snap also makes it touch-swipeable)
+    var imgs = photos.map(function(p){
+      return '<img src="'+esc(p)+'" alt="'+name+'" loading="lazy">';
+    }).join("");
+    var dots = photos.map(function(_, i){
+      return '<span class="'+(i===0?"is-active":"")+'"></span>';
+    }).join("");
+    return '<div class="gallery'+(contain?' gal-contain':'')+'">'+
+      '<div class="gal-track">'+imgs+'</div>'+
+      '<button type="button" class="gal-nav gal-prev" aria-label="前の写真">‹</button>'+
+      '<button type="button" class="gal-nav gal-next" aria-label="次の写真">›</button>'+
+      '<span class="gal-count">1/'+photos.length+'</span>'+
+      '<div class="gal-dots">'+dots+'</div>'+
     '</div>';
+  }
+
+  function wireGallery(root){
+    root.querySelectorAll(".gallery").forEach(function(gal){
+      if(gal.dataset.wired) return;
+      gal.dataset.wired = "1";
+      var track = gal.querySelector(".gal-track");
+      var imgs = track.querySelectorAll("img");
+      var count = gal.querySelector(".gal-count");
+      var dots = gal.querySelectorAll(".gal-dots span");
+      var prev = gal.querySelector(".gal-prev");
+      var next = gal.querySelector(".gal-next");
+
+      function currentIndex(){
+        return Math.round(track.scrollLeft / track.clientWidth) || 0;
+      }
+      function update(){
+        var idx = Math.max(0, Math.min(imgs.length - 1, currentIndex()));
+        if(count) count.textContent = (idx+1) + "/" + imgs.length;
+        dots.forEach(function(d,i){ d.classList.toggle("is-active", i===idx); });
+      }
+      function goTo(idx){
+        idx = Math.max(0, Math.min(imgs.length - 1, idx));
+        track.scrollTo({ left: idx * track.clientWidth, behavior: "smooth" });
+      }
+      var scrollTimer = null;
+      track.addEventListener("scroll", function(){
+        if(scrollTimer) cancelAnimationFrame(scrollTimer);
+        scrollTimer = requestAnimationFrame(update);
+      });
+      if(prev) prev.addEventListener("click", function(){ goTo(currentIndex() - 1); });
+      if(next) next.addEventListener("click", function(){ goTo(currentIndex() + 1); });
+      update();
+    });
   }
 
   function wireCompare(root){
@@ -402,27 +483,43 @@ img{max-width:100%;}
   function renderItems(){
     var list = itemsForStore(currentStore).filter(function(it){ return it.visit_date === currentDate; })
       .sort(function(a,b){ return (parseInt(a.no,10)||0) - (parseInt(b.no,10)||0); });
+    itemListEl.__list = list;
 
-    itemListEl.innerHTML = list.map(function(item, idx){
-      var ck = catKey(item.category);
-      var hasBoth = driveImg(item.before_photo_url) && driveImg(item.after_photo_url);
-      return '<article class="item-card" data-cat="'+ck+'" data-idx="'+idx+'">'+
-        '<div class="item-head">'+
-          '<span class="item-no">No.'+esc(item.no||"-")+'</span>'+
-          '<h3>'+esc(item.item_name)+'</h3>'+
-          '<span class="cat-badge cat-'+ck+'">'+esc(item.category||"-")+'</span>'+
-        '</div>'+
-        compareMarkup(item)+
-        '<div class="item-foot">'+
-          '<span class="hint">'+(hasBoth ? "⇔ ドラッグしてBefore/After比較" : "")+'</span>'+
-          '<button class="expand-btn" data-idx="'+idx+'">⤢ 拡大表示</button>'+
-        '</div>'+
-        '<p class="remark">'+esc(item.remark||"")+'</p>'+
-      '</article>';
+    // group by item_type, in order of first appearance; blank item_type stays ungrouped (no header)
+    var groupOrder = [];
+    var groups = {};
+    list.forEach(function(item, idx){
+      var g = (item.item_type || "").trim();
+      if(!groups[g]){ groups[g] = []; groupOrder.push(g); }
+      groups[g].push(idx);
+    });
+
+    itemListEl.innerHTML = groupOrder.map(function(g){
+      var cardsHtml = groups[g].map(function(idx){
+        var item = list[idx];
+        var ck = catKey(item.category);
+        var photos = parsePhotos(item);
+        var hint = photos.length === 2 ? "⇔ ドラッグしてBefore/After比較" : (photos.length > 2 ? "← → スワイプで他の写真" : "");
+        return '<article class="item-card" data-cat="'+ck+'" data-idx="'+idx+'">'+
+          '<div class="item-head">'+
+            '<span class="item-no">No.'+esc(item.no||"-")+'</span>'+
+            '<h3>'+esc(item.item_name)+'</h3>'+
+            '<span class="cat-badge cat-'+ck+'">'+esc(item.category||"-")+'</span>'+
+          '</div>'+
+          mediaMarkup(item, "", "card")+
+          '<div class="item-foot">'+
+            '<span class="hint">'+hint+'</span>'+
+            '<button class="expand-btn" data-idx="'+idx+'">⤢ 拡大表示</button>'+
+          '</div>'+
+          '<p class="remark">'+esc(item.remark||"")+'</p>'+
+        '</article>';
+      }).join("");
+      var titleHtml = g ? '<div class="item-section-title">'+esc(g)+'</div>' : "";
+      return '<div class="item-section">'+titleHtml+cardsHtml+'</div>';
     }).join("");
 
-    itemListEl.__list = list;
     wireCompare(itemListEl);
+    wireGallery(itemListEl);
     itemListEl.querySelectorAll(".expand-btn").forEach(function(btn){
       btn.addEventListener("click", function(){ openLightbox(parseInt(btn.getAttribute("data-idx"),10)); });
     });
@@ -432,8 +529,9 @@ img{max-width:100%;}
     var item = (itemListEl.__list||[])[idx];
     if(!item) return;
     var wrap = document.getElementById("lbCompare");
-    wrap.innerHTML = compareMarkup(item, "cmp-contain");
+    wrap.innerHTML = mediaMarkup(item, "cmp-contain", "lightbox");
     wireCompare(wrap);
+    wireGallery(wrap);
     document.getElementById("lbCat").textContent = item.category || "";
     document.getElementById("lbTitle").textContent = item.item_name || "";
     document.getElementById("lbRemark").textContent = item.remark || "";
