@@ -71,6 +71,12 @@ img{max-width:100%;}
   background:var(--surface);color:var(--ink-dim);cursor:pointer;}
 .chip.is-active{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
 
+.type-tabs{display:flex;gap:4px;background:var(--surface-2);border-radius:12px;padding:4px;margin-top:14px;}
+.type-tabs[hidden]{display:none;}
+.type-tab{flex:1;text-align:center;padding:9px 6px;border:none;background:transparent;border-radius:9px;
+  font-size:12.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;}
+.type-tab.is-active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18);}
+
 .item-list{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
 .item-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px;}
 .item-card[hidden]{display:none;}
@@ -93,7 +99,7 @@ img{max-width:100%;}
 .compare.cmp-contain img{object-fit:contain;}
 .compare .cmp-after{clip-path:inset(0 50% 0 0);}
 .compare .cmp-range{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;
-  -webkit-appearance:none;appearance:none;background:transparent;touch-action:none;}
+  -webkit-appearance:none;appearance:none;background:transparent;touch-action:pan-y;}
 .compare .cmp-handle{position:absolute;top:0;bottom:0;left:50%;width:0;pointer-events:none;}
 .compare .cmp-handle::before{content:"";position:absolute;top:0;bottom:0;left:-1px;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.3);}
 .compare .cmp-handle::after{content:"⇔";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;
@@ -104,9 +110,14 @@ img{max-width:100%;}
 .compare .cmp-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;
   color:var(--ink-dim);font-size:11.5px;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface-2);}
 
+.media-fallback{display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;
+  background:var(--surface-2);color:var(--ink-dim);font-size:11.5px;line-height:1.6;}
+.compare .media-fallback{position:absolute;inset:0;}
+.gal-track .media-fallback{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;}
+
 .gallery{position:relative;width:100%;height:210px;border-radius:12px;overflow:hidden;background:var(--surface-2);}
 .gallery.gal-contain{height:min(58vh,520px);}
-.gallery .gal-track{display:flex;height:100%;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;}
+.gallery .gal-track{display:flex;height:100%;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-y;}
 .gallery .gal-track::-webkit-scrollbar{display:none;}
 .gallery .gal-track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:start;scroll-snap-stop:always;display:block;}
 .gallery.gal-contain .gal-track img{object-fit:contain;}
@@ -165,6 +176,7 @@ img{max-width:100%;}
       <div class="meta" id="storeMeta"></div>
     </header>
     <div class="date-picker" id="datePicker" hidden></div>
+    <div class="type-tabs" id="typeTabs" hidden></div>
     <div class="chips" id="filterChips"></div>
     <div id="storeState"></div>
     <div class="item-list" id="itemList"></div>
@@ -205,7 +217,12 @@ img{max-width:100%;}
   var storeStateEl = document.getElementById("storeState");
   var itemListEl = document.getElementById("itemList");
   var chipsEl = document.getElementById("filterChips");
+  var typeTabsEl = document.getElementById("typeTabs");
   var datePickerEl = document.getElementById("datePicker");
+  var currentCatFilter = "all";
+  var currentTypeFilter = "すべて";
+
+  function typeKey(item){ return (item.item_type || "").trim() || "その他"; }
   var lightbox = document.getElementById("lightbox");
 
   // ---- helpers ----
@@ -233,6 +250,15 @@ img{max-width:100%;}
     var raw = item.photo_urls || "";
     return raw.split(/[,\n]/).map(function(s){ return driveImg(s); }).filter(Boolean);
   }
+
+  window.handleImgError = function(img){
+    if(img.dataset.failed) return;
+    img.dataset.failed = "1";
+    var fb = document.createElement("div");
+    fb.className = (img.className ? img.className + " " : "") + "media-fallback";
+    fb.textContent = "画像を読み込めません";
+    img.replaceWith(fb);
+  };
 
   function esc(s){
     return String(s==null?"":s).replace(/[&<>"']/g, function(c){
@@ -341,6 +367,10 @@ img{max-width:100%;}
             datePickerEl.querySelectorAll(".chip").forEach(function(c){c.classList.remove("is-active");});
             chip.classList.add("is-active");
             currentDate = chip.getAttribute("data-date");
+            currentCatFilter = "all";
+            currentTypeFilter = "すべて";
+            renderTypeTabs();
+            renderChips();
             renderItems();
           });
         });
@@ -348,6 +378,9 @@ img{max-width:100%;}
         datePickerEl.hidden = true;
         datePickerEl.innerHTML = "";
       }
+      currentCatFilter = "all";
+      currentTypeFilter = "すべて";
+      renderTypeTabs();
       renderChips();
       renderItems();
     }
@@ -370,16 +403,47 @@ img{max-width:100%;}
       chip.addEventListener("click", function(){
         chipsEl.querySelectorAll(".chip").forEach(function(c){c.classList.remove("is-active");});
         chip.classList.add("is-active");
-        filterItems(chip.getAttribute("data-cat"));
+        currentCatFilter = chip.getAttribute("data-cat");
+        applyFilters();
       });
     });
   }
 
-  function filterItems(cat){
+  // "共通"/"個別" (or whatever labels are used in the sheet) as a tab row, so the
+  // distinction is a clear top-level switch rather than just a section heading.
+  function renderTypeTabs(){
+    var order = []; var seen = {};
+    itemsForStore(currentStore).filter(function(it){ return it.visit_date === currentDate; }).forEach(function(it){
+      var k = typeKey(it);
+      if(!seen[k]){ seen[k] = true; order.push(k); }
+    });
+    if(order.length <= 1){
+      typeTabsEl.hidden = true;
+      typeTabsEl.innerHTML = "";
+      return;
+    }
+    typeTabsEl.hidden = false;
+    var tabs = ["すべて"].concat(order);
+    typeTabsEl.innerHTML = tabs.map(function(t){
+      return '<button class="type-tab'+(t===currentTypeFilter?" is-active":"")+'" data-type="'+esc(t)+'">'+esc(t)+'</button>';
+    }).join("");
+    typeTabsEl.querySelectorAll(".type-tab").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        typeTabsEl.querySelectorAll(".type-tab").forEach(function(c){ c.classList.remove("is-active"); });
+        btn.classList.add("is-active");
+        currentTypeFilter = btn.getAttribute("data-type");
+        applyFilters();
+      });
+    });
+  }
+
+  function applyFilters(){
     itemListEl.querySelectorAll(".item-section").forEach(function(section){
+      var typeOk = currentTypeFilter === "すべて" || section.getAttribute("data-type") === currentTypeFilter;
+      if(!typeOk){ section.hidden = true; return; }
       var anyVisible = false;
       section.querySelectorAll(".item-card").forEach(function(card){
-        var show = (cat==="all" || card.getAttribute("data-cat")===cat);
+        var show = (currentCatFilter==="all" || card.getAttribute("data-cat")===currentCatFilter);
         card.hidden = !show;
         if(show) anyVisible = true;
       });
@@ -399,8 +463,8 @@ img{max-width:100%;}
 
     if(photos.length === 2){
       return '<div class="compare '+(extraClass||'')+'" data-before="1">'+
-        '<img class="cmp-before" src="'+esc(photos[0])+'" alt="'+name+' Before" loading="lazy">'+
-        '<img class="cmp-after" src="'+esc(photos[1])+'" alt="'+name+' After" loading="lazy">'+
+        '<img class="cmp-before" src="'+esc(photos[0])+'" alt="'+name+' Before" loading="lazy" onerror="handleImgError(this)">'+
+        '<img class="cmp-after" src="'+esc(photos[1])+'" alt="'+name+' After" loading="lazy" onerror="handleImgError(this)">'+
         '<input class="cmp-range" type="range" min="0" max="100" value="50" aria-label="Before After 比較">'+
         '<div class="cmp-handle"></div>'+
         '<span class="cmp-tag cmp-tag--before">BEFORE</span>'+
@@ -412,12 +476,12 @@ img{max-width:100%;}
 
     if(photos.length === 1){
       return '<div class="compare '+(contain?'cmp-contain':'')+'">'+
-        '<img src="'+esc(photos[0])+'" alt="'+name+'" loading="lazy"></div>';
+        '<img src="'+esc(photos[0])+'" alt="'+name+'" loading="lazy" onerror="handleImgError(this)"></div>';
     }
 
     // 3+: swipeable gallery with nav arrows + dots (scroll-snap also makes it touch-swipeable)
     var imgs = photos.map(function(p){
-      return '<img src="'+esc(p)+'" alt="'+name+'" loading="lazy">';
+      return '<img src="'+esc(p)+'" alt="'+name+'" loading="lazy" onerror="handleImgError(this)">';
     }).join("");
     var dots = photos.map(function(_, i){
       return '<span class="'+(i===0?"is-active":"")+'"></span>';
@@ -485,14 +549,16 @@ img{max-width:100%;}
       .sort(function(a,b){ return (parseInt(a.no,10)||0) - (parseInt(b.no,10)||0); });
     itemListEl.__list = list;
 
-    // group by item_type, in order of first appearance; blank item_type stays ungrouped (no header)
+    // group by item_type, in order of first appearance. Headers (and the tabs above)
+    // only show when there's more than one group — otherwise it's just a flat list.
     var groupOrder = [];
     var groups = {};
     list.forEach(function(item, idx){
-      var g = (item.item_type || "").trim();
+      var g = typeKey(item);
       if(!groups[g]){ groups[g] = []; groupOrder.push(g); }
       groups[g].push(idx);
     });
+    var showHeaders = groupOrder.length > 1;
 
     itemListEl.innerHTML = groupOrder.map(function(g){
       var cardsHtml = groups[g].map(function(idx){
@@ -514,8 +580,8 @@ img{max-width:100%;}
           '<p class="remark">'+esc(item.remark||"")+'</p>'+
         '</article>';
       }).join("");
-      var titleHtml = g ? '<div class="item-section-title">'+esc(g)+'</div>' : "";
-      return '<div class="item-section">'+titleHtml+cardsHtml+'</div>';
+      var titleHtml = showHeaders ? '<div class="item-section-title">'+esc(g)+'</div>' : "";
+      return '<div class="item-section" data-type="'+esc(g)+'">'+titleHtml+cardsHtml+'</div>';
     }).join("");
 
     wireCompare(itemListEl);
@@ -523,6 +589,7 @@ img{max-width:100%;}
     itemListEl.querySelectorAll(".expand-btn").forEach(function(btn){
       btn.addEventListener("click", function(){ openLightbox(parseInt(btn.getAttribute("data-idx"),10)); });
     });
+    applyFilters();
   }
 
   function openLightbox(idx){
