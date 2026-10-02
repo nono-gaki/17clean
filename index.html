@@ -72,6 +72,7 @@ img{max-width:100%;}
 
 .item-list{display:flex;flex-direction:column;gap:24px;margin-top:6px;}
 .item-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px;}
+@media (hover:hover) and (pointer:fine){ .item-card{cursor:pointer;} }
 .item-card[hidden]{display:none;}
 .item-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
 .item-no{font-family:var(--font-mono);font-size:11px;color:var(--ink-dim);}
@@ -105,11 +106,18 @@ img{max-width:100%;}
 .gal-track .media-fallback{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:start;scroll-snap-stop:always;}
 
 .gallery{position:relative;width:100%;height:210px;border-radius:12px;overflow:hidden;background:var(--surface-2);}
-.gallery.gal-contain{height:min(58vh,520px);}
-.gallery .gal-track{display:flex;height:100%;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x pan-y;}
+.gallery.gal-contain{height:min(58vh,520px);max-height:min(58vh,520px);background:transparent;}
+/* Neighboring photos peek in at the edges, packed close with a small gap, so
+   swiping feels continuous instead of a blank jump — the centered photo stays
+   the clear main focus. This is the card-view look only. */
+.gallery .gal-track{display:flex;height:100%;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x pan-y;gap:8px;padding-inline:clamp(14px,6%,48px);}
 .gallery .gal-track::-webkit-scrollbar{display:none;}
-.gallery .gal-track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:start;scroll-snap-stop:always;display:block;}
-.gallery.gal-contain .gal-track img{object-fit:contain;}
+.gallery .gal-track img{flex:0 0 88%;width:88%;height:100%;object-fit:cover;scroll-snap-align:center;scroll-snap-stop:always;display:block;border-radius:10px;}
+/* Lightbox (enlarged) view: no peeking, no gap — each photo fills the frame
+   edge to edge so swiping to the next one feels like a single continuous
+   filmstrip with nothing visible in between. */
+.gallery.gal-contain .gal-track{gap:0;padding-inline:0;}
+.gallery.gal-contain .gal-track img{flex:0 0 100%;width:100%;object-fit:contain;border-radius:0;}
 .gallery .gal-count{position:absolute;top:8px;right:8px;padding:3px 8px;font:600 10.5px/1 var(--font-mono);letter-spacing:.04em;
   border-radius:999px;background:rgba(10,16,24,.62);color:#fff;pointer-events:none;}
 .gallery .gal-nav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;
@@ -124,19 +132,16 @@ img{max-width:100%;}
 .item-section-title{font-size:13px;font-weight:700;color:var(--ink-dim);letter-spacing:.02em;margin:0;
   padding-bottom:6px;border-bottom:1px solid var(--line);}
 
-.item-foot{display:flex;align-items:center;justify-content:flex-end;margin-top:9px;}
-.expand-btn{background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0;}
-@media (max-width:719px){ .item-foot{display:none;} .compare[data-before], .gallery{cursor:pointer;} }
 .remark{margin-top:10px;font-size:12.5px;line-height:1.7;color:var(--ink-dim);padding-top:10px;border-top:1px solid var(--line);white-space:pre-line;}
 
-.lightbox{position:fixed;inset:0;background:rgba(6,10,15,.94);z-index:50;display:flex;flex-direction:column;overflow-y:auto;
+.lightbox{position:fixed;inset:0;background:#3c3f44;z-index:50;display:flex;flex-direction:column;overflow-y:auto;
   padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);}
 .lightbox[hidden]{display:none;}
 .lightbox{touch-action:pan-y;}
 .lb-top{display:flex;justify-content:flex-end;max-width:520px;width:100%;margin:0 auto;}
 .lb-close{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1;cursor:pointer;}
 .lb-content{max-width:520px;width:100%;margin:10px auto 0;color:#fff;}
-.lb-content .compare{height:min(52vh,480px);}
+.lb-content .compare{height:min(52vh,480px);max-height:min(52vh,480px);}
 .lb-cat{display:inline-block;margin-top:14px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.14);}
 .lb-content h2{font-size:19px;margin-top:8px;color:#fff;}
 .lb-content .remark{color:rgba(255,255,255,.72);border-top:1px solid rgba(255,255,255,.18);}
@@ -149,8 +154,8 @@ img{max-width:100%;}
   .item-section{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;align-items:start;}
   .item-section-title{grid-column:1/-1;}
   .lb-top, .lb-content{max-width:1100px;}
-  .lb-content .compare{height:min(78vh,860px);}
-  .gallery.gal-contain{height:min(78vh,860px);}
+  .lb-content .compare{height:min(78vh,860px);max-height:min(78vh,860px);}
+  .gallery.gal-contain{height:min(78vh,860px);max-height:min(78vh,860px);}
 }
 
 [hidden]{display:none!important;}
@@ -180,6 +185,7 @@ img{max-width:100%;}
     <div class="chips" id="filterChips"></div>
     <div id="storeState"></div>
     <div class="item-list" id="itemList"></div>
+    <div class="state-box" id="itemEmptyMsg" hidden></div>
   </div>
 
   <div id="lightbox" class="lightbox" hidden>
@@ -219,8 +225,16 @@ img{max-width:100%;}
   var chipsEl = document.getElementById("filterChips");
   var typeTabsEl = document.getElementById("typeTabs");
   var datePickerEl = document.getElementById("datePicker");
+  var itemEmptyMsgEl = document.getElementById("itemEmptyMsg");
   var currentCatFilter = "all";
   var currentTypeFilter = "すべて";
+  // Shared with the lightbox's pinch-zoom controller (wireZoom): while the photo is
+  // zoomed in, or a second finger has just touched down for a pinch, the normal
+  // single-finger gestures (before/after drag, gallery swipe, swipe-down-to-close)
+  // stand down so they don't fight with zooming/panning.
+  var zoomScale = 1;
+  var multiTouchCount = 0;
+  function zoomActive(){ return zoomScale > 1.01 || multiTouchCount >= 2; }
 
   function typeKey(item){ return (item.item_type || "").trim() || "その他"; }
   // Display labels for the item_type tabs/section headers — the sheet keeps using
@@ -358,6 +372,9 @@ img{max-width:100%;}
       chipsEl.innerHTML = "";
       datePickerEl.hidden = true;
       datePickerEl.innerHTML = "";
+      typeTabsEl.hidden = true;
+      typeTabsEl.innerHTML = "";
+      itemEmptyMsgEl.hidden = true;
     }else{
       storeStateEl.innerHTML = "";
       currentDate = dates[0];
@@ -415,9 +432,12 @@ img{max-width:100%;}
 
   // "共通"/"個別" (or whatever labels are used in the sheet) as a tab row, so the
   // distinction is a clear top-level switch rather than just a section heading.
+  // Based on every type the store has EVER used (not just the currently selected
+  // date), so the tabs stay put when switching dates — a date with only one type
+  // recorded just shows an empty state on the other tab instead of hiding it.
   function renderTypeTabs(){
     var order = []; var seen = {};
-    itemsForStore(currentStore).filter(function(it){ return it.visit_date === currentDate; }).forEach(function(it){
+    itemsForStore(currentStore).forEach(function(it){
       var k = typeKey(it);
       if(!seen[k]){ seen[k] = true; order.push(k); }
     });
@@ -443,6 +463,7 @@ img{max-width:100%;}
   }
 
   function applyFilters(){
+    var anyVisibleAtAll = false;
     itemListEl.querySelectorAll(".item-section").forEach(function(section){
       var typeOk = currentTypeFilter === "すべて" || section.getAttribute("data-type") === currentTypeFilter;
       if(!typeOk){ section.hidden = true; return; }
@@ -453,7 +474,16 @@ img{max-width:100%;}
         if(show) anyVisible = true;
       });
       section.hidden = !anyVisible;
+      if(anyVisible) anyVisibleAtAll = true;
     });
+    if(itemEmptyMsgEl){
+      var hasAnySection = itemListEl.querySelectorAll(".item-section").length > 0;
+      itemEmptyMsgEl.hidden = !hasAnySection || anyVisibleAtAll;
+      if(!itemEmptyMsgEl.hidden){
+        var label = currentTypeFilter === "すべて" ? "" : typeLabel(currentTypeFilter) + "の";
+        itemEmptyMsgEl.textContent = "この日付には" + label + "項目がありません。";
+      }
+    }
   }
 
   // photos.length === 2 → Before/After compare slider (the common case).
@@ -480,7 +510,7 @@ img{max-width:100%;}
     var contain = mode === "lightbox";
 
     if(photos.length === 1){
-      return '<div class="compare '+(contain?'cmp-contain':'')+'">'+
+      return '<div class="compare '+(contain?'cmp-contain':'cmp-tappable')+'">'+
         '<img src="'+esc(photos[0])+'" alt="'+name+'" loading="lazy" onerror="handleImgError(this)"></div>';
     }
 
@@ -504,6 +534,36 @@ img{max-width:100%;}
   // pointer didn't move enough to count as a swipe and didn't land on the nav
   // buttons — so the main item list can open the lightbox on mobile without a
   // separate "拡大表示" button to tap.
+  // Which photo a gallery is currently centered on — shared by wireGallery's
+  // own tap handler and the desktop whole-card click handler, so opening the
+  // lightbox can land on the same photo that was already showing.
+  function galleryActiveIndex(gal){
+    var track = gal.querySelector(".gal-track");
+    if(!track) return 0;
+    var imgs = track.querySelectorAll("img");
+    var target = track.scrollLeft + track.clientWidth / 2;
+    var best = 0, bestDist = Infinity;
+    imgs.forEach(function(img, i){
+      var center = img.offsetLeft + img.offsetWidth / 2;
+      var d = Math.abs(center - target);
+      if(d < bestDist){ bestDist = d; best = i; }
+    });
+    return best;
+  }
+
+  // Lightbox-only: shrinks/grows the media box to exactly match a photo's own
+  // aspect ratio, so a portrait photo fills the full width with no left/right
+  // letterbox bars left over from object-fit:contain. The CSS max-height set
+  // on .gal-contain / .lb-content .compare still caps it for very tall shots.
+  function fitContainHeight(box, img){
+    if(!box || !img) return;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    if(!w || !h) return;
+    var width = box.clientWidth;
+    if(!width) return;
+    box.style.height = (width * h / w) + "px";
+  }
+
   function wireGallery(root, onTap){
     root.querySelectorAll(".gallery").forEach(function(gal){
       if(gal.dataset.wired) return;
@@ -514,18 +574,43 @@ img{max-width:100%;}
       var dots = gal.querySelectorAll(".gal-dots span");
       var prev = gal.querySelector(".gal-prev");
       var next = gal.querySelector(".gal-next");
+      var isContain = gal.classList.contains("gal-contain"); // lightbox only
 
+      // Measures actual slide positions rather than assuming slide width === track
+      // width, so this works whether slides are full-width (lightbox) or peek a bit
+      // of their neighbors at the edges (compact card view).
       function currentIndex(){
-        return Math.round(track.scrollLeft / track.clientWidth) || 0;
+        var target = track.scrollLeft + track.clientWidth / 2;
+        var best = 0, bestDist = Infinity;
+        imgs.forEach(function(img, i){
+          var center = img.offsetLeft + img.offsetWidth / 2;
+          var d = Math.abs(center - target);
+          if(d < bestDist){ bestDist = d; best = i; }
+        });
+        return best;
+      }
+      function fitActive(idx){
+        if(!isContain) return;
+        var img = imgs[idx];
+        if(!img) return;
+        if(img.complete && img.naturalWidth){
+          fitContainHeight(gal, img);
+        }else{
+          img.addEventListener("load", function(){ fitContainHeight(gal, img); }, { once:true });
+        }
       }
       function update(){
         var idx = Math.max(0, Math.min(imgs.length - 1, currentIndex()));
         if(count) count.textContent = (idx+1) + "/" + imgs.length;
         dots.forEach(function(d,i){ d.classList.toggle("is-active", i===idx); });
+        fitActive(idx);
       }
       function goTo(idx){
         idx = Math.max(0, Math.min(imgs.length - 1, idx));
-        track.scrollTo({ left: idx * track.clientWidth, behavior: "smooth" });
+        var img = imgs[idx];
+        if(!img) return;
+        var target = img.offsetLeft + img.offsetWidth / 2 - track.clientWidth / 2;
+        track.scrollTo({ left: target, behavior: "smooth" });
       }
       var scrollTimer = null;
       track.addEventListener("scroll", function(){
@@ -539,6 +624,7 @@ img{max-width:100%;}
       if(onTap){
         var tapX = 0, tapY = 0, tapMoved = false;
         gal.addEventListener("pointerdown", function(e){
+          if(zoomActive()) return;
           tapX = e.clientX; tapY = e.clientY; tapMoved = false;
         });
         gal.addEventListener("pointermove", function(e){
@@ -546,10 +632,11 @@ img{max-width:100%;}
         });
         gal.addEventListener("pointercancel", function(){ tapMoved = true; });
         gal.addEventListener("pointerup", function(e){
-          if(e.pointerType === "mouse") return;
+          if(e.pointerType === "mouse") return; // desktop: whole card handles clicks (wireCardOpen)
+          if(zoomActive()) return;
           if(tapMoved) return;
           if(e.target.closest && e.target.closest(".gal-nav")) return;
-          onTap(gal);
+          onTap(gal, currentIndex());
         });
       }
     });
@@ -578,6 +665,14 @@ img{max-width:100%;}
         var rect = el.getBoundingClientRect();
         return (clientX - rect.left) / rect.width * 100;
       }
+      // On desktop, when this card also opens a lightbox on click (onTap set),
+      // only a grab near the dividing line should move it — clicking anywhere
+      // else is a click-to-expand instead. In the lightbox itself (no onTap)
+      // the whole image still drags the divider, same as before.
+      function nearHandle(clientX){
+        var rect = handle.getBoundingClientRect();
+        return Math.abs(clientX - rect.left) <= 24;
+      }
 
       if(range){
         range.addEventListener("input", function(){ setPercent(parseFloat(range.value)); });
@@ -588,17 +683,25 @@ img{max-width:100%;}
 
       el.addEventListener("pointerdown", function(e){
         if(e.pointerType === "mouse" && e.button !== 0) return;
+        if(zoomActive()) return;
         startX = e.clientX; startY = e.clientY;
         if(e.pointerType === "mouse"){
-          state = "drag";
-          el.setPointerCapture(e.pointerId);
-          setPercent(percentFromX(e.clientX));
+          if(onTap && !nearHandle(e.clientX)){
+            // Not grabbing the line — let the click bubble up to the
+            // card-level open handler (wireCardOpen) instead of dragging.
+            state = null;
+          }else{
+            state = "drag";
+            el.setPointerCapture(e.pointerId);
+            setPercent(percentFromX(e.clientX));
+          }
         }else{
           state = "pending";
         }
       });
       el.addEventListener("pointermove", function(e){
         if(!state) return;
+        if(zoomActive()){ state = null; return; }
         var dx = e.clientX - startX, dy = e.clientY - startY;
         if(state === "pending"){
           if(Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
@@ -616,15 +719,78 @@ img{max-width:100%;}
         }
       }, { passive:false });
       function endDrag(e, isCancel){
-        var wasTap = !isCancel && onTap && state === "pending" && e.pointerType !== "mouse";
+        var wasTouchTap = !isCancel && onTap && state === "pending" && e.pointerType !== "mouse";
         if(state === "drag"){
           try{ el.releasePointerCapture(e.pointerId); }catch(err){}
         }
         state = null;
-        if(wasTap) onTap(el);
+        if(wasTouchTap) onTap(el);
       }
       el.addEventListener("pointerup", function(e){ endDrag(e, false); });
       el.addEventListener("pointercancel", function(e){ endDrag(e, true); });
+    });
+  }
+
+  // Plain single-photo cards have no before/after drag at all, so the whole
+  // card is just a tap/click target to open the lightbox.
+  function wireSingleTap(root, onTap){
+    root.querySelectorAll(".compare.cmp-tappable").forEach(function(el){
+      if(el.dataset.wired) return;
+      el.dataset.wired = "1";
+      var startX = 0, startY = 0, moved = false;
+      el.addEventListener("pointerdown", function(e){
+        if(zoomActive()) return;
+        startX = e.clientX; startY = e.clientY; moved = false;
+      });
+      el.addEventListener("pointermove", function(e){
+        if(Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) moved = true;
+      });
+      el.addEventListener("pointercancel", function(){ moved = true; });
+      el.addEventListener("pointerup", function(e){
+        if(e.pointerType === "mouse") return; // desktop: whole card handles clicks (wireCardOpen)
+        if(zoomActive()) return;
+        if(moved) return;
+        if(onTap) onTap(el);
+      });
+    });
+  }
+
+  // Desktop only: clicking anywhere inside a card's white frame opens the
+  // lightbox — title, badge, remark text, the photo itself — except for an
+  // actual drag on the before/after divider or a tap on the gallery's
+  // prev/next arrows, which are handled by their own wiring above.
+  function wireCardOpen(root, onOpen){
+    if(root.dataset.cardOpenWired) return; // root (itemListEl) persists across re-renders
+    root.dataset.cardOpenWired = "1";
+    root.addEventListener("pointerdown", function(e){
+      if(e.pointerType !== "mouse") return;
+      var card = e.target.closest(".item-card");
+      if(!card) return;
+      var cmp = e.target.closest(".compare[data-before]");
+      var skip = false;
+      if(cmp){
+        var handle = cmp.querySelector(".cmp-handle");
+        if(handle){
+          var rect = handle.getBoundingClientRect();
+          skip = Math.abs(e.clientX - rect.left) <= 24;
+        }
+      }
+      card.__cardOpenSkip = skip;
+      card.__cardOpenX = e.clientX;
+      card.__cardOpenY = e.clientY;
+    });
+    root.addEventListener("pointerup", function(e){
+      if(e.pointerType !== "mouse") return;
+      var card = e.target.closest(".item-card");
+      if(!card) return;
+      if(card.__cardOpenSkip) return;
+      if(e.target.closest && e.target.closest(".gal-nav")) return;
+      if(zoomActive()) return;
+      var dx = Math.abs(e.clientX - (card.__cardOpenX || 0));
+      var dy = Math.abs(e.clientY - (card.__cardOpenY || 0));
+      if(dx > 6 || dy > 6) return;
+      var gal = card.querySelector(".gallery");
+      onOpen(card, gal ? galleryActiveIndex(gal) : 0);
     });
   }
 
@@ -655,9 +821,6 @@ img{max-width:100%;}
             '<span class="cat-badge cat-'+ck+'">'+esc(item.category||"-")+'</span>'+
           '</div>'+
           mediaMarkup(item, "", "card")+
-          '<div class="item-foot">'+
-            '<button class="expand-btn" data-idx="'+idx+'">⤢ 拡大表示</button>'+
-          '</div>'+
           '<p class="remark">'+esc(item.remark||"")+'</p>'+
         '</article>';
       }).join("");
@@ -665,31 +828,245 @@ img{max-width:100%;}
       return '<div class="item-section" data-type="'+esc(g)+'">'+titleHtml+cardsHtml+'</div>';
     }).join("");
 
-    function openFromEl(el){
+    function openFromEl(el, photoIdx){
       var card = el.closest(".item-card");
-      if(card) openLightbox(parseInt(card.getAttribute("data-idx"),10));
+      if(card) openLightbox(parseInt(card.getAttribute("data-idx"),10), photoIdx||0);
     }
     wireCompare(itemListEl, openFromEl);
     wireGallery(itemListEl, openFromEl);
-    itemListEl.querySelectorAll(".expand-btn").forEach(function(btn){
-      btn.addEventListener("click", function(){ openLightbox(parseInt(btn.getAttribute("data-idx"),10)); });
+    wireSingleTap(itemListEl, openFromEl);
+    wireCardOpen(itemListEl, function(card, photoIdx){
+      openLightbox(parseInt(card.getAttribute("data-idx"),10), photoIdx||0);
     });
     applyFilters();
   }
 
-  function openLightbox(idx){
+  // Pinch-to-zoom + pan for the lightbox (enlarged) view, plus double-tap as a
+  // one-finger shortcut for the same thing. Only wired on the lightbox's own copy
+  // of the media (openLightbox below) — the small cards in the list already have
+  // their hands full with the before/after drag and gallery swipe.
+  function wireZoom(root){
+    var media = root.querySelector(".compare, .gallery");
+    if(!media || media.dataset.zoomWired) return;
+    media.dataset.zoomWired = "1";
+    var isGallery = media.classList.contains("gallery");
+    var track = isGallery ? media.querySelector(".gal-track") : null;
+
+    var scale = 1, panX = 0, panY = 0;
+    var pointers = {};
+    var pinchStart = null;
+    var panStart = null;
+    var lastTapTime = 0, lastTapX = 0, lastTapY = 0;
+
+    // The active image's own box (not the track's — the track is wider than one
+    // photo now that neighbors peek in at the edges). offsetLeft/offsetWidth are
+    // used instead of getBoundingClientRect() because they stay stable (unaffected
+    // by the zoom transform itself) throughout a pinch/pan gesture.
+    function activeImg(){
+      if(!isGallery) return null;
+      var imgs = track.querySelectorAll("img");
+      if(!imgs.length) return null;
+      var target = track.scrollLeft + track.clientWidth / 2;
+      var best = imgs[0], bestDist = Infinity;
+      imgs.forEach(function(img){
+        var center = img.offsetLeft + img.offsetWidth / 2;
+        var d = Math.abs(center - target);
+        if(d < bestDist){ bestDist = d; best = img; }
+      });
+      return best;
+    }
+    function currentTargets(){
+      if(isGallery){
+        var img = activeImg();
+        return img ? [img] : [];
+      }
+      return Array.prototype.slice.call(media.children).filter(function(c){ return c.tagName === "IMG"; });
+    }
+    function boxSize(){
+      if(isGallery){
+        var img = activeImg();
+        return img ? { w: img.offsetWidth, h: img.offsetHeight } : { w: 0, h: 0 };
+      }
+      return { w: media.clientWidth, h: media.clientHeight };
+    }
+    function localPoint(clientX, clientY){
+      if(isGallery){
+        var img = activeImg();
+        if(!img) return { x: 0, y: 0 };
+        var trackRect = track.getBoundingClientRect();
+        var imgLeft = trackRect.left + (img.offsetLeft - track.scrollLeft);
+        var imgTop = trackRect.top + (img.offsetTop - track.scrollTop);
+        return { x: clientX - imgLeft, y: clientY - imgTop };
+      }
+      var rect = media.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    function clamp(){
+      var size = boxSize();
+      var minX = Math.min(0, size.w - size.w * scale);
+      var minY = Math.min(0, size.h - size.h * scale);
+      panX = Math.max(minX, Math.min(0, panX));
+      panY = Math.max(minY, Math.min(0, panY));
+    }
+    function apply(){
+      currentTargets().forEach(function(img){
+        img.style.transformOrigin = "0 0";
+        img.style.transform = scale === 1 ? "" : "translate(" + panX + "px," + panY + "px) scale(" + scale + ")";
+      });
+      zoomScale = scale;
+      if(track) track.style.overflowX = scale > 1.01 ? "hidden" : "";
+      media.classList.toggle("is-zoomed", scale > 1.01);
+    }
+    function reset(){ scale = 1; panX = 0; panY = 0; apply(); }
+    function zoomAt(lp, s1){
+      panX = lp.x * (1 - s1);
+      panY = lp.y * (1 - s1);
+      scale = s1;
+      clamp();
+      apply();
+    }
+
+    if(track){
+      track.addEventListener("scroll", function(){ if(scale > 1.01) reset(); });
+    }
+
+    function dist(p1, p2){ return Math.hypot(p1.x - p2.x, p1.y - p2.y); }
+    function mid(p1, p2){ return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }; }
+
+    media.addEventListener("pointerdown", function(e){
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var ids = Object.keys(pointers);
+      if(ids.length === 2){
+        var p1 = pointers[ids[0]], p2 = pointers[ids[1]];
+        var m = mid(p1, p2);
+        pinchStart = { dist: dist(p1, p2) || 1, scale: scale, panX: panX, panY: panY, mid: localPoint(m.x, m.y) };
+        panStart = null;
+      }else if(ids.length === 1){
+        if(scale > 1.01){
+          panStart = { x: e.clientX, y: e.clientY, panX: panX, panY: panY };
+        }
+        media.__tapStart = { x: e.clientX, y: e.clientY };
+      }
+    });
+    media.addEventListener("pointermove", function(e){
+      if(!(e.pointerId in pointers)) return;
+      pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      var ids = Object.keys(pointers);
+      if(ids.length >= 2 && pinchStart){
+        e.preventDefault();
+        var p1 = pointers[ids[0]], p2 = pointers[ids[1]];
+        var s1 = Math.max(1, Math.min(4, pinchStart.scale * (dist(p1, p2) / pinchStart.dist)));
+        panX = pinchStart.mid.x - (pinchStart.mid.x - pinchStart.panX) * (s1 / pinchStart.scale);
+        panY = pinchStart.mid.y - (pinchStart.mid.y - pinchStart.panY) * (s1 / pinchStart.scale);
+        scale = s1;
+        clamp();
+        apply();
+      }else if(ids.length === 1 && panStart){
+        e.preventDefault();
+        panX = panStart.panX + (e.clientX - panStart.x);
+        panY = panStart.panY + (e.clientY - panStart.y);
+        clamp();
+        apply();
+      }
+    }, { passive: false });
+    function endPointer(e){
+      var hadPinch = !!pinchStart;
+      delete pointers[e.pointerId];
+      var remaining = Object.keys(pointers).length;
+      if(remaining < 2) pinchStart = null;
+      if(remaining < 1) panStart = null;
+
+      if(!hadPinch && remaining === 0){
+        var ts = media.__tapStart;
+        if(ts && Math.abs(e.clientX - ts.x) < 10 && Math.abs(e.clientY - ts.y) < 10){
+          var now = Date.now();
+          if(now - lastTapTime < 320 && Math.abs(ts.x - lastTapX) < 30 && Math.abs(ts.y - lastTapY) < 30){
+            if(scale > 1.01){ reset(); }
+            else{ zoomAt(localPoint(ts.x, ts.y), 2.5); }
+            lastTapTime = 0;
+          }else{
+            lastTapTime = now; lastTapX = ts.x; lastTapY = ts.y;
+          }
+        }
+      }
+    }
+    media.addEventListener("pointerup", endPointer);
+    media.addEventListener("pointercancel", function(e){
+      delete pointers[e.pointerId];
+      pinchStart = null; panStart = null;
+    });
+  }
+
+  function openLightbox(idx, photoIdx){
     var item = (itemListEl.__list||[])[idx];
     if(!item) return;
+    zoomScale = 1;
+    multiTouchCount = 0;
     var wrap = document.getElementById("lbCompare");
     wrap.innerHTML = mediaMarkup(item, "cmp-contain", "lightbox");
+    // Unhide before measuring anything below — a [hidden] (display:none)
+    // element and its children report 0 for all layout sizes, which would
+    // make the scroll-position and height calculations below silently fail.
+    lightbox.hidden = false;
+    document.body.style.overflow = "hidden";
+    // Land on whichever photo was already showing in the card's own gallery,
+    // instead of always resetting back to the first photo — done before
+    // wiring so the gallery's own initial dot/counter/fit already reflect it.
+    if(photoIdx){
+      var openGal = wrap.querySelector(".gallery");
+      if(openGal){
+        var openTrack = openGal.querySelector(".gal-track");
+        var openImgs = openTrack.querySelectorAll("img");
+        var target = openImgs[photoIdx];
+        if(target){
+          openTrack.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - openTrack.clientWidth / 2;
+        }
+      }
+    }
     wireCompare(wrap);
     wireGallery(wrap);
+    wireZoom(wrap);
+    // Before/after and single-photo views don't swap images per swipe, so
+    // their height only needs fitting once, to whichever photo loads first.
+    var containBox = wrap.querySelector(".compare.cmp-contain");
+    if(containBox){
+      var fitImg = containBox.querySelector(".cmp-before") || containBox.querySelector("img");
+      if(fitImg){
+        if(fitImg.complete && fitImg.naturalWidth){
+          fitContainHeight(containBox, fitImg);
+        }else{
+          fitImg.addEventListener("load", function(){ fitContainHeight(containBox, fitImg); }, { once:true });
+        }
+      }
+    }
     document.getElementById("lbCat").textContent = item.category || "";
     document.getElementById("lbTitle").textContent = item.item_name || "";
     document.getElementById("lbRemark").textContent = item.remark || "";
-    lightbox.hidden = false;
-    document.body.style.overflow = "hidden";
   }
+
+  // Re-fit the open lightbox's media box on orientation change / window resize.
+  window.addEventListener("resize", function(){
+    if(lightbox.hidden) return;
+    var wrap = document.getElementById("lbCompare");
+    var containBox = wrap.querySelector(".compare.cmp-contain");
+    if(containBox){
+      var fitImg = containBox.querySelector(".cmp-before") || containBox.querySelector("img");
+      if(fitImg && fitImg.naturalWidth) fitContainHeight(containBox, fitImg);
+    }
+    var gal = wrap.querySelector(".gallery.gal-contain");
+    if(gal){
+      var track = gal.querySelector(".gal-track");
+      var imgs = track.querySelectorAll("img");
+      var target = track.scrollLeft + track.clientWidth / 2;
+      var best = imgs[0], bestDist = Infinity;
+      imgs.forEach(function(img){
+        var center = img.offsetLeft + img.offsetWidth / 2;
+        var d = Math.abs(center - target);
+        if(d < bestDist){ bestDist = d; best = img; }
+      });
+      if(best && best.naturalWidth) fitContainHeight(gal, best);
+    }
+  });
 
   function closeLightbox(){
     lightbox.hidden = true;
@@ -697,7 +1074,16 @@ img{max-width:100%;}
     var content = lightbox.querySelector(".lb-content");
     if(content){ content.style.transition = ""; content.style.transform = ""; content.style.opacity = ""; }
     lightbox.style.background = "";
+    zoomScale = 1;
+    multiTouchCount = 0;
   }
+
+  // Tracks how many fingers are currently down inside the lightbox, in the capture
+  // phase so it's accurate before wireCompare/wireGallery/wireZoom's own (bubble
+  // phase) listeners on the same event run.
+  lightbox.addEventListener("pointerdown", function(){ multiTouchCount++; }, true);
+  lightbox.addEventListener("pointerup", function(){ multiTouchCount = Math.max(0, multiTouchCount - 1); }, true);
+  lightbox.addEventListener("pointercancel", function(){ multiTouchCount = Math.max(0, multiTouchCount - 1); }, true);
 
   document.getElementById("lbClose").addEventListener("click", closeLightbox);
 
@@ -708,11 +1094,12 @@ img{max-width:100%;}
   (function(){
     var drag = null; // null | {startX, startY, state}
     lightbox.addEventListener("pointerdown", function(e){
-      if(lightbox.hidden || lightbox.scrollTop > 0){ drag = null; return; }
+      if(lightbox.hidden || lightbox.scrollTop > 0 || zoomActive()){ drag = null; return; }
       drag = { startX: e.clientX, startY: e.clientY, state: "pending" };
     });
     lightbox.addEventListener("pointermove", function(e){
       if(!drag) return;
+      if(zoomActive()){ drag = null; return; }
       var dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
       if(drag.state === "pending"){
         if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
