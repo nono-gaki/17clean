@@ -17,13 +17,6 @@
   --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#10151c; --surface:#171f29; --surface-2:#1f2a37; --line:#2b3744;
-    --ink:#eef2f6; --ink-dim:#9aa7b6; --accent:#6c9bd1; --accent-ink:#0b1620;
-    --good:#57b89a; --warn:#d99a52; color-scheme: dark;
-  }
-}
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;background:var(--bg);}
 body{color:var(--ink);font-family:var(--font-body);-webkit-font-smoothing:antialiased;
@@ -77,7 +70,7 @@ img{max-width:100%;}
   font-size:12.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;}
 .type-tab.is-active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18);}
 
-.item-list{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
+.item-list{display:flex;flex-direction:column;gap:24px;margin-top:6px;}
 .item-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:14px;}
 .item-card[hidden]{display:none;}
 .item-head{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
@@ -88,11 +81,6 @@ img{max-width:100%;}
 .cat-badge.cat-hvac{background:#dde8f3;color:#1f4d7a;}
 .cat-badge.cat-shop{background:#e2ecdf;color:#355c2c;}
 .cat-badge.cat-other{background:var(--surface-2);color:var(--ink-dim);}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .cat-badge.cat-kitchen{background:#4a3417;color:#f3dcb8;}
-  :root:not([data-theme="light"]) .cat-badge.cat-hvac{background:#1f3350;color:#bcd6f0;}
-  :root:not([data-theme="light"]) .cat-badge.cat-shop{background:#223a1e;color:#cfe3c8;}
-}
 
 .compare{position:relative;width:100%;height:210px;border-radius:12px;overflow:hidden;background:var(--surface-2);touch-action:pan-y;}
 .compare[data-before]{cursor:ew-resize;}
@@ -132,19 +120,19 @@ img{max-width:100%;}
 .gallery .gal-dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.45);}
 .gallery .gal-dots span.is-active{background:#fff;}
 
-.item-section + .item-section{margin-top:22px;}
-.item-section-title{font-size:13px;font-weight:700;color:var(--ink-dim);letter-spacing:.02em;margin:18px 0 10px;
+.item-section{display:flex;flex-direction:column;gap:16px;}
+.item-section-title{font-size:13px;font-weight:700;color:var(--ink-dim);letter-spacing:.02em;margin:0;
   padding-bottom:6px;border-bottom:1px solid var(--line);}
-.item-section:first-child .item-section-title{margin-top:0;}
 
-.item-foot{display:flex;align-items:center;justify-content:space-between;margin-top:9px;}
-.hint{font-size:11.5px;color:var(--ink-dim);}
+.item-foot{display:flex;align-items:center;justify-content:flex-end;margin-top:9px;}
 .expand-btn{background:none;border:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 0;}
+@media (max-width:719px){ .item-foot{display:none;} .compare[data-before], .gallery{cursor:pointer;} }
 .remark{margin-top:10px;font-size:12.5px;line-height:1.7;color:var(--ink-dim);padding-top:10px;border-top:1px solid var(--line);white-space:pre-line;}
 
 .lightbox{position:fixed;inset:0;background:rgba(6,10,15,.94);z-index:50;display:flex;flex-direction:column;overflow-y:auto;
   padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);}
 .lightbox[hidden]{display:none;}
+.lightbox{touch-action:pan-y;}
 .lb-top{display:flex;justify-content:flex-end;max-width:520px;width:100%;margin:0 auto;}
 .lb-close{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1;cursor:pointer;}
 .lb-content{max-width:520px;width:100%;margin:10px auto 0;color:#fff;}
@@ -154,6 +142,17 @@ img{max-width:100%;}
 .lb-content .remark{color:rgba(255,255,255,.72);border-top:1px solid rgba(255,255,255,.18);}
 
 @media (max-width:360px){ .compare{height:180px;} }
+
+@media (min-width:720px){
+  #app{max-width:1040px;}
+  .store-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;}
+  .item-section{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;align-items:start;}
+  .item-section-title{grid-column:1/-1;}
+  .lb-top, .lb-content{max-width:1100px;}
+  .lb-content .compare{height:min(78vh,860px);}
+  .gallery.gal-contain{height:min(78vh,860px);}
+}
+
 [hidden]{display:none!important;}
 </style>
 </head>
@@ -224,6 +223,10 @@ img{max-width:100%;}
   var currentTypeFilter = "すべて";
 
   function typeKey(item){ return (item.item_type || "").trim() || "その他"; }
+  // Display labels for the item_type tabs/section headers — the sheet keeps using
+  // the short "共通"/"個別" values, but the UI shows the friendlier full names.
+  var TYPE_LABELS = { "共通": "共通項目", "個別": "店舗別項目" };
+  function typeLabel(key){ return TYPE_LABELS[key] || key; }
   var lightbox = document.getElementById("lightbox");
 
   // ---- helpers ----
@@ -426,7 +429,8 @@ img{max-width:100%;}
     typeTabsEl.hidden = false;
     var tabs = ["すべて"].concat(order);
     typeTabsEl.innerHTML = tabs.map(function(t){
-      return '<button class="type-tab'+(t===currentTypeFilter?" is-active":"")+'" data-type="'+esc(t)+'">'+esc(t)+'</button>';
+      var label = t === "すべて" ? t : typeLabel(t);
+      return '<button class="type-tab'+(t===currentTypeFilter?" is-active":"")+'" data-type="'+esc(t)+'">'+esc(label)+'</button>';
     }).join("");
     typeTabsEl.querySelectorAll(".type-tab").forEach(function(btn){
       btn.addEventListener("click", function(){
@@ -496,7 +500,11 @@ img{max-width:100%;}
     '</div>';
   }
 
-  function wireGallery(root){
+  // onTap (optional) fires for a plain touch tap on the image area — i.e. the
+  // pointer didn't move enough to count as a swipe and didn't land on the nav
+  // buttons — so the main item list can open the lightbox on mobile without a
+  // separate "拡大表示" button to tap.
+  function wireGallery(root, onTap){
     root.querySelectorAll(".gallery").forEach(function(gal){
       if(gal.dataset.wired) return;
       gal.dataset.wired = "1";
@@ -527,6 +535,23 @@ img{max-width:100%;}
       if(prev) prev.addEventListener("click", function(){ goTo(currentIndex() - 1); });
       if(next) next.addEventListener("click", function(){ goTo(currentIndex() + 1); });
       update();
+
+      if(onTap){
+        var tapX = 0, tapY = 0, tapMoved = false;
+        gal.addEventListener("pointerdown", function(e){
+          tapX = e.clientX; tapY = e.clientY; tapMoved = false;
+        });
+        gal.addEventListener("pointermove", function(e){
+          if(Math.abs(e.clientX - tapX) > 8 || Math.abs(e.clientY - tapY) > 8) tapMoved = true;
+        });
+        gal.addEventListener("pointercancel", function(){ tapMoved = true; });
+        gal.addEventListener("pointerup", function(e){
+          if(e.pointerType === "mouse") return;
+          if(tapMoved) return;
+          if(e.target.closest && e.target.closest(".gal-nav")) return;
+          onTap(gal);
+        });
+      }
     });
   }
 
@@ -535,7 +560,7 @@ img{max-width:100%;}
   // A small direction-lock decides, on the first few pixels of movement, whether the
   // gesture is a horizontal drag (slider) or a vertical one (page scroll) so the two
   // never fight each other.
-  function wireCompare(root){
+  function wireCompare(root, onTap){
     root.querySelectorAll(".compare[data-before]").forEach(function(el){
       if(el.dataset.wired) return;
       el.dataset.wired = "1";
@@ -590,14 +615,16 @@ img{max-width:100%;}
           setPercent(percentFromX(e.clientX));
         }
       }, { passive:false });
-      function endDrag(e){
+      function endDrag(e, isCancel){
+        var wasTap = !isCancel && onTap && state === "pending" && e.pointerType !== "mouse";
         if(state === "drag"){
           try{ el.releasePointerCapture(e.pointerId); }catch(err){}
         }
         state = null;
+        if(wasTap) onTap(el);
       }
-      el.addEventListener("pointerup", endDrag);
-      el.addEventListener("pointercancel", endDrag);
+      el.addEventListener("pointerup", function(e){ endDrag(e, false); });
+      el.addEventListener("pointercancel", function(e){ endDrag(e, true); });
     });
   }
 
@@ -621,8 +648,6 @@ img{max-width:100%;}
       var cardsHtml = groups[g].map(function(idx){
         var item = list[idx];
         var ck = catKey(item.category);
-        var photos = parsePhotos(item);
-        var hint = photos.length === 2 ? "⇔ ドラッグしてBefore/After比較" : (photos.length > 2 ? "← → スワイプで他の写真" : "");
         return '<article class="item-card" data-cat="'+ck+'" data-idx="'+idx+'">'+
           '<div class="item-head">'+
             '<span class="item-no">No.'+esc(item.no||"-")+'</span>'+
@@ -631,18 +656,21 @@ img{max-width:100%;}
           '</div>'+
           mediaMarkup(item, "", "card")+
           '<div class="item-foot">'+
-            '<span class="hint">'+hint+'</span>'+
             '<button class="expand-btn" data-idx="'+idx+'">⤢ 拡大表示</button>'+
           '</div>'+
           '<p class="remark">'+esc(item.remark||"")+'</p>'+
         '</article>';
       }).join("");
-      var titleHtml = showHeaders ? '<div class="item-section-title">'+esc(g)+'</div>' : "";
+      var titleHtml = showHeaders ? '<div class="item-section-title">'+esc(typeLabel(g))+'</div>' : "";
       return '<div class="item-section" data-type="'+esc(g)+'">'+titleHtml+cardsHtml+'</div>';
     }).join("");
 
-    wireCompare(itemListEl);
-    wireGallery(itemListEl);
+    function openFromEl(el){
+      var card = el.closest(".item-card");
+      if(card) openLightbox(parseInt(card.getAttribute("data-idx"),10));
+    }
+    wireCompare(itemListEl, openFromEl);
+    wireGallery(itemListEl, openFromEl);
     itemListEl.querySelectorAll(".expand-btn").forEach(function(btn){
       btn.addEventListener("click", function(){ openLightbox(parseInt(btn.getAttribute("data-idx"),10)); });
     });
@@ -663,10 +691,62 @@ img{max-width:100%;}
     document.body.style.overflow = "hidden";
   }
 
-  document.getElementById("lbClose").addEventListener("click", function(){
+  function closeLightbox(){
     lightbox.hidden = true;
     document.body.style.overflow = "";
-  });
+    var content = lightbox.querySelector(".lb-content");
+    if(content){ content.style.transition = ""; content.style.transform = ""; content.style.opacity = ""; }
+    lightbox.style.background = "";
+  }
+
+  document.getElementById("lbClose").addEventListener("click", closeLightbox);
+
+  // Swipe down to close: only engages when the lightbox is already scrolled to the
+  // top (so it never fights with scrolling down to read a long remark), and only
+  // for a gesture that starts out mostly vertical/downward (so it doesn't fight
+  // with the before/after drag or the multi-photo horizontal swipe).
+  (function(){
+    var drag = null; // null | {startX, startY, state}
+    lightbox.addEventListener("pointerdown", function(e){
+      if(lightbox.hidden || lightbox.scrollTop > 0){ drag = null; return; }
+      drag = { startX: e.clientX, startY: e.clientY, state: "pending" };
+    });
+    lightbox.addEventListener("pointermove", function(e){
+      if(!drag) return;
+      var dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+      if(drag.state === "pending"){
+        if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        drag.state = (dy > 0 && dy > Math.abs(dx)) ? "closing" : "ignore";
+      }
+      if(drag.state === "closing"){
+        e.preventDefault();
+        var content = lightbox.querySelector(".lb-content");
+        var dist = Math.max(0, dy);
+        if(content){
+          content.style.transition = "none";
+          content.style.transform = "translateY(" + dist + "px)";
+          content.style.opacity = String(Math.max(0.35, 1 - dist / 400));
+        }
+      }
+    }, { passive: false });
+    function endLbDrag(e){
+      if(!drag) return;
+      if(drag.state === "closing"){
+        var dy = e.clientY - drag.startY;
+        var content = lightbox.querySelector(".lb-content");
+        if(dy > 90){
+          closeLightbox();
+        }else if(content){
+          content.style.transition = "transform .2s ease, opacity .2s ease";
+          content.style.transform = "";
+          content.style.opacity = "";
+        }
+      }
+      drag = null;
+    }
+    lightbox.addEventListener("pointerup", endLbDrag);
+    lightbox.addEventListener("pointercancel", endLbDrag);
+  })();
 
   document.getElementById("backBtn").addEventListener("click", function(){
     viewStore.hidden = true;
