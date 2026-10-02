@@ -57,6 +57,17 @@ img{max-width:100%;}
 .meta .row span.k{font-family:var(--font-mono);color:var(--ink-dim);margin-right:8px;}
 .meta .row span.v{color:var(--ink);}
 
+.store-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;}
+.store-title-row h1{margin:0;}
+.meeting-points-btn{flex:none;font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:999px;
+  border:1px solid #cfe0f3;background:#eaf1fb;color:var(--accent);cursor:pointer;font-family:inherit;}
+.meeting-points-btn.is-open{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.meeting-points{background:#eaf1fb;border:1px solid #cfe0f3;border-radius:var(--radius);margin-top:10px;padding:10px 14px 12px;}
+.meeting-points-title{font-size:11.5px;font-weight:700;color:var(--accent);letter-spacing:.02em;margin:10px 0 5px;}
+.meeting-points-title:first-child{margin-top:0;}
+.meeting-points-list{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:4px;}
+.meeting-points-list li{font-size:13px;line-height:1.6;color:var(--ink);}
+
 .date-picker{display:flex;gap:8px;overflow-x:auto;padding-block:10px 4px;scrollbar-width:none;}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-block:10px 4px;scrollbar-width:none;}
 .chips::-webkit-scrollbar,.date-picker::-webkit-scrollbar{display:none;}
@@ -177,9 +188,13 @@ img{max-width:100%;}
   <div id="view-store" class="view" hidden>
     <header class="detail-header">
       <button class="back-btn" id="backBtn">← 店舗一覧に戻る</button>
-      <h1 id="storeName"></h1>
+      <div class="store-title-row">
+        <h1 id="storeName"></h1>
+        <button type="button" class="meeting-points-btn" id="meetingPointsBtn" hidden>整備箇所</button>
+      </div>
       <div class="meta" id="storeMeta"></div>
     </header>
+    <div class="meeting-points" id="meetingPoints" hidden></div>
     <div class="date-picker" id="datePicker" hidden></div>
     <div class="type-tabs" id="typeTabs" hidden></div>
     <div class="chips" id="filterChips"></div>
@@ -213,6 +228,7 @@ img{max-width:100%;}
 
   var STORES = [];
   var ITEMS = [];
+  var MEETINGS = [];
   var currentStore = null;
   var currentDate = null;
 
@@ -222,6 +238,7 @@ img{max-width:100%;}
   var listStateEl = document.getElementById("listState");
   var storeStateEl = document.getElementById("storeState");
   var itemListEl = document.getElementById("itemList");
+  var meetingPointsEl = document.getElementById("meetingPoints");
   var chipsEl = document.getElementById("filterChips");
   var typeTabsEl = document.getElementById("typeTabs");
   var datePickerEl = document.getElementById("datePicker");
@@ -287,7 +304,7 @@ img{max-width:100%;}
   // ---- data load ----
   async function loadData(){
     listStateEl.innerHTML = '<div class="state-box">読み込み中です…</div>';
-    var ranges = ["stores!A1:Z2000","items!A1:Z2000"].map(function(r){
+    var ranges = ["stores!A1:Z2000","items!A1:Z2000","meeting_points!A1:Z2000"].map(function(r){
       return "ranges=" + encodeURIComponent(r);
     }).join("&");
     var url = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "/values:batchGet?" + ranges + "&key=" + API_KEY;
@@ -298,6 +315,9 @@ img{max-width:100%;}
       var vr = json.valueRanges || [];
       STORES = rowsToObjects((vr[0]||{}).values);
       ITEMS = rowsToObjects((vr[1]||{}).values);
+      // meeting_points is optional — older spreadsheets without that tab just
+      // come back with an empty/missing range, which is fine (no points shown).
+      MEETINGS = rowsToObjects((vr[2]||{}).values);
       listStateEl.innerHTML = "";
       renderStores();
     }catch(err){
@@ -313,6 +333,53 @@ img{max-width:100%;}
     var set = {};
     itemsForStore(storeId).forEach(function(it){ if(it.visit_date) set[it.visit_date] = true; });
     return Object.keys(set).sort().reverse();
+  }
+
+  function meetingsForStore(storeId){
+    return MEETINGS.filter(function(m){ return m.store_id === storeId; });
+  }
+
+  // Always-visible reference list of the points agreed on with the client for
+  // this store (from the "meeting_points" sheet) — separate from the dated
+  // before/after photo records below it.
+  // The toggle button lives next to the store name (store-title-row); the
+  // collapsible list itself (meetingPointsEl) sits below the header.
+  // Same at every store, regardless of what the spreadsheet has — unlike the
+  // 店舗別項目 list below, which comes from the meeting_points sheet.
+  var COMMON_MAINTENANCE_ITEMS = [
+    "フード(グリスフィルター・防火ダンパー含む)",
+    "冷機器ラジエーター",
+    "エアコン(内機)",
+    "エアコン(パーツ)"
+  ];
+
+  function renderMeetingPoints(storeId){
+    var list = meetingsForStore(storeId);
+    var btn = document.getElementById("meetingPointsBtn");
+    btn.hidden = false;
+    btn.classList.remove("is-open");
+    btn.setAttribute("aria-expanded", "false");
+    meetingPointsEl.hidden = true; // collapsed by default each time a store opens
+
+    var storeSectionHtml = list.length
+      ? '<div class="meeting-points-title">店舗別項目</div>' +
+        '<ul class="meeting-points-list">' +
+        list.map(function(m){ return '<li>'+esc(m.item||"")+'</li>'; }).join("") +
+        '</ul>'
+      : "";
+    meetingPointsEl.innerHTML =
+      '<div class="meeting-points-title">共通項目</div>' +
+      '<ul class="meeting-points-list">' +
+      COMMON_MAINTENANCE_ITEMS.map(function(it){ return '<li>'+esc(it)+'</li>'; }).join("") +
+      '</ul>' +
+      storeSectionHtml;
+
+    btn.onclick = function(){
+      var open = meetingPointsEl.hidden;
+      meetingPointsEl.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      btn.classList.toggle("is-open", open);
+    };
   }
 
   // ---- store list ----
@@ -355,7 +422,16 @@ img{max-width:100%;}
   }
 
   // ---- store detail ----
+  // Pushes a history entry so the browser's own back gesture — the trackpad's
+  // two-finger swipe on desktop, the edge-swipe on iOS Safari, the Android back
+  // button, or the actual back button — all land back on the store list
+  // through the popstate handler below, instead of just leaving the site.
   function openStore(storeId){
+    history.pushState({view:"store", storeId:storeId}, "", "#store=" + encodeURIComponent(storeId));
+    showStoreView(storeId);
+  }
+
+  function showStoreView(storeId){
     var store = STORES.filter(function(s){ return s.store_id === storeId; })[0];
     if(!store) return;
     currentStore = storeId;
@@ -364,6 +440,7 @@ img{max-width:100%;}
     document.getElementById("storeMeta").innerHTML =
       '<div class="row"><span class="k">住所</span><span class="v">'+esc(store.address||"-")+'</span></div>'+
       '<div class="row"><span class="k">担当者</span><span class="v">'+esc(store.staff||"-")+'</span></div>';
+    renderMeetingPoints(storeId);
 
     var dates = visitDatesForStore(storeId);
     if(!dates.length){
@@ -1135,10 +1212,77 @@ img{max-width:100%;}
     lightbox.addEventListener("pointercancel", endLbDrag);
   })();
 
-  document.getElementById("backBtn").addEventListener("click", function(){
+  function goBackToList(){
     viewStore.hidden = true;
     viewList.hidden = false;
     window.scrollTo(0,0);
+  }
+
+  // Both the back button and the swipe gesture below just ask the browser to
+  // go back; the actual view switch happens in the popstate handler further
+  // down, which is also what fires for the browser's own back gestures
+  // (trackpad two-finger swipe, iOS edge-swipe, Android back button).
+  document.getElementById("backBtn").addEventListener("click", function(){ history.back(); });
+
+  // Swipe right to go back to the store list — touch only, and not when the
+  // gesture starts on something that already scrolls/drags horizontally
+  // itself (the photo gallery, before/after compare, chip rows, date picker,
+  // type tabs), so it never steals their swipe.
+  (function(){
+    var drag = null; // null | {startX, startY, state}
+    var EXCLUDE = ".gallery, .compare, .date-picker, .type-tabs, .chips";
+    viewStore.addEventListener("pointerdown", function(e){
+      if(e.pointerType === "mouse" || viewStore.hidden || !lightbox.hidden){ drag = null; return; }
+      if(e.target.closest && e.target.closest(EXCLUDE)){ drag = null; return; }
+      drag = { startX: e.clientX, startY: e.clientY, state: "pending" };
+    });
+    viewStore.addEventListener("pointermove", function(e){
+      if(!drag) return;
+      var dx = e.clientX - drag.startX, dy = e.clientY - drag.startY;
+      if(drag.state === "pending"){
+        if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        drag.state = (dx > 0 && dx > Math.abs(dy)) ? "swiping" : "ignore";
+      }
+      if(drag.state === "swiping"){
+        e.preventDefault();
+        var dist = Math.max(0, dx);
+        viewStore.style.transition = "none";
+        viewStore.style.transform = "translateX(" + dist + "px)";
+        viewStore.style.opacity = String(Math.max(0.4, 1 - dist / 500));
+      }
+    }, { passive: false });
+    function endSwipe(e){
+      if(!drag) return;
+      if(drag.state === "swiping"){
+        var dx = e.clientX - drag.startX;
+        if(dx > 90){
+          viewStore.style.transition = "";
+          viewStore.style.transform = "";
+          viewStore.style.opacity = "";
+          history.back();
+        }else{
+          viewStore.style.transition = "transform .2s ease, opacity .2s ease";
+          viewStore.style.transform = "";
+          viewStore.style.opacity = "";
+        }
+      }
+      drag = null;
+    }
+    viewStore.addEventListener("pointerup", endSwipe);
+    viewStore.addEventListener("pointercancel", endSwipe);
+  })();
+
+  // Baseline history entry for the list view, so the very first "back" from a
+  // store (however it's triggered) has somewhere defined to land.
+  history.replaceState({view:"list"}, "", location.pathname + location.search);
+
+  window.addEventListener("popstate", function(e){
+    var state = e.state;
+    if(state && state.view === "store" && state.storeId){
+      showStoreView(state.storeId);
+    }else{
+      goBackToList();
+    }
   });
 
   loadData();
