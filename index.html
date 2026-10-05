@@ -262,7 +262,7 @@ img{max-width:100%;}
   function typeKey(item){ return (item.item_type || "").trim() || "その他"; }
   // Display labels for the item_type tabs/section headers — the sheet keeps using
   // the short "共通"/"個別" values, but the UI shows the friendlier full names.
-  var TYPE_LABELS = { "共通": "共通項目", "個別": "店舗別項目" };
+  var TYPE_LABELS = { "共通": "共通項目", "個別": "店舗別項目(打ち合わせ箇所)" };
   function typeLabel(key){ return TYPE_LABELS[key] || key; }
   var lightbox = document.getElementById("lightbox");
 
@@ -368,7 +368,7 @@ img{max-width:100%;}
     meetingPointsEl.hidden = true; // collapsed by default each time a store opens
 
     var storeSectionHtml = list.length
-      ? '<div class="meeting-points-title">店舗別項目</div>' +
+      ? '<div class="meeting-points-title">店舗別項目(打ち合わせ箇所)</div>' +
         '<ul class="meeting-points-list">' +
         list.map(function(m){ return '<li>'+esc(m.item||"")+'</li>'; }).join("") +
         '</ul>'
