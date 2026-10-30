@@ -198,6 +198,132 @@ img{max-width:100%;}
 .price-row-note{margin-top:4px;font-size:11.5px;color:var(--ink-dim);line-height:1.5;}
 .price-footnote{margin-top:16px;font-size:11.5px;color:var(--ink-dim);line-height:1.8;}
 
+/* ---- machine map (俯瞰図) ---- */
+.map-floor-tabs{display:flex;gap:4px;background:var(--surface-2);border-radius:12px;padding:4px;
+  margin-top:14px;overflow-x:auto;scrollbar-width:none;}
+.map-floor-tabs[hidden]{display:none;}
+.map-floor-tabs::-webkit-scrollbar{display:none;}
+.map-floor-tab{flex:none;min-width:64px;text-align:center;padding:9px 14px;border:none;background:transparent;
+  border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink-dim);cursor:pointer;font-family:inherit;}
+.map-floor-tab.is-active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18);}
+
+.map-canvas-wrap{margin-top:14px;overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--line);
+  background:var(--surface);-webkit-overflow-scrolling:touch;display:flex;justify-content:center;align-items:center;}
+.map-canvas{position:relative;width:100%;aspect-ratio:8/5;background-color:var(--surface);
+  container-type:inline-size;}
+.map-section{position:absolute;border:1px solid var(--line);border-radius:12px;pointer-events:none;}
+.map-section-label{position:absolute;top:8px;left:8px;padding:2px 10px;border-radius:999px;
+  background:var(--surface-2);color:var(--ink);font-weight:800;font-size:clamp(10.5px,1.9cqw,13px);
+  letter-spacing:.02em;}
+.map-zone{position:absolute;border:1.5px dashed #b9c6d6;border-radius:8px;}
+.map-zone-label{position:absolute;top:clamp(4px,0.9375cqw,6px);left:clamp(6px,1.25cqw,8px);
+  font-size:clamp(9.5px,1.71875cqw,11px);font-weight:700;color:var(--ink-dim);
+  letter-spacing:.02em;pointer-events:none;}
+.map-outline-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+.map-outline-fill{fill:none;stroke:none;}
+.map-outline-wall{fill:none;stroke:#3a4452;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
+.map-entrance{position:absolute;pointer-events:none;z-index:1;}
+.map-entrance svg{width:100%;height:100%;display:block;overflow:visible;}
+.map-door-leaf{fill:none;stroke:#2b2f36;stroke-width:2;stroke-linecap:square;}
+.map-door-arc{fill:none;stroke:#2b2f36;stroke-width:1.5;}
+/* Equipment is a plain box carrying only a small number that matches its
+   row in the equipment list — names live in the tap bubble, the list and
+   the detail panel rather than on the drawing itself. */
+/* Equipment boxes are filled light grey with no outline, like the
+   reference floor plan; the thin white border just keeps a box that sits on
+   top of another (卓上コンロ on 低温コールド) visibly separate from it. */
+.map-equip{position:absolute;transform:translate(-50%,-50%);cursor:pointer;z-index:2;box-sizing:border-box;
+  min-width:clamp(26px,5.3125cqw,34px);min-height:clamp(20px,4.0625cqw,26px);
+  border-radius:clamp(2px,0.4cqw,3px);background:#c8d1d9;border:1.5px solid #fff;}
+.map-equip:active{background:var(--accent);}
+.map-equip.is-selected{background:var(--accent);}
+.map-equip-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--ink-dim);pointer-events:none;}
+.map-equip.is-selected .map-equip-badge{color:var(--accent-ink);}
+.map-hint{margin-top:10px;font-size:11.5px;color:var(--ink-dim);}
+
+/* ---- machine map equipment list (both mobile & desktop) ---- */
+.map-layout[hidden]{display:none;}
+.map-side-title{margin-top:18px;font-size:12.5px;font-weight:700;color:var(--ink-dim);letter-spacing:.02em;}
+.map-side-count{font-weight:400;margin-left:2px;}
+.map-list{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+.map-list-group{margin:8px 2px 0;font-size:12px;font-weight:800;color:var(--ink);}
+.map-list-group:first-child{margin-top:0;}
+.map-list-empty{font-size:12.5px;color:var(--ink-dim);padding:10px 2px;}
+.map-list-row{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;
+  border:1.5px solid var(--line);border-radius:10px;background:var(--surface);
+  cursor:pointer;text-align:left;font-family:inherit;}
+.map-list-row.is-active{border-color:var(--accent);}
+.map-list-badge{flex:none;width:22px;height:22px;border-radius:50%;background:var(--surface-2);
+  color:var(--ink-dim);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.map-list-row.is-active .map-list-badge{background:var(--accent);color:var(--accent-ink);}
+.map-list-name{flex:1;font-size:13px;font-weight:600;color:var(--ink);}
+
+/* Phone: the details slide up as a sheet over the lower part of the screen
+   only — no dark overlay, and the map above stays live, so tapping another
+   box just switches the sheet's contents and tapping an empty part of the
+   map (or ×, or swiping the sheet down) closes it. */
+.map-detail{position:fixed;left:0;right:0;bottom:0;z-index:60;pointer-events:none;}
+.map-detail[hidden]{display:none;}
+.map-detail-backdrop{display:none;}
+.map-detail-sheet{position:relative;pointer-events:auto;background:var(--surface);
+  border-radius:20px 20px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom,0px));
+  max-width:560px;margin:0 auto;max-height:60vh;overflow-y:auto;overscroll-behavior:contain;
+  box-shadow:0 -2px 18px rgba(0,0,0,.13);animation:mapSheetUp .24s cubic-bezier(.22,.8,.24,1);
+  transition:transform .18s ease-out;will-change:transform;}
+.map-detail.is-closing .map-detail-sheet{animation:mapSheetDown .18s ease-in forwards;}
+.map-detail-sheet.is-dragging{transition:none;}
+.map-detail-handle{position:absolute;top:8px;left:50%;width:40px;height:4px;margin-left:-20px;
+  border-radius:2px;background:var(--line);}
+@keyframes mapSheetUp{from{transform:translateY(100%);}to{transform:none;}}
+@keyframes mapSheetDown{to{transform:translateY(100%);}}
+.map-detail-close{position:absolute;top:12px;right:14px;background:var(--surface-2);border:none;
+  color:var(--ink-dim);width:30px;height:30px;border-radius:50%;font-size:16px;line-height:1;cursor:pointer;}
+.map-detail-name{font-family:var(--font-display);font-weight:900;font-size:17px;margin-right:30px;}
+.map-detail-rows{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.map-detail-rows .row{display:flex;gap:10px;font-size:13px;}
+.map-detail-rows .row .k{flex:none;width:86px;color:var(--ink-dim);font-family:var(--font-mono);
+  font-size:11.5px;padding-top:1px;}
+.map-detail-rows .row .v{flex:1;color:var(--ink);line-height:1.5;}
+@keyframes mapPanelIn{from{transform:translateX(-100%);}to{transform:none;}}
+@keyframes mapPanelOut{to{transform:translateX(-100%);}}
+
+/* Speech-bubble callout over a box: shown only for the equipment that's
+   been tapped/clicked (not on mouse-over) — like a shopping-mall floor guide. Kept inside the map's own width, with the
+   little pointer still aimed at the box when it has to shift sideways. */
+.map-canvas-wrap{position:relative;isolation:isolate;}  /* keeps the bubble under the sticky page header when scrolled */
+.map-bubble{position:absolute;z-index:5;display:none;pointer-events:none;white-space:nowrap;text-align:center;
+  transform:translateY(calc(-100% - 10px));background:var(--surface);border-radius:10px;
+  padding:7px 12px;box-shadow:0 3px 14px rgba(0,0,0,.2);}
+.map-bubble.is-shown{display:block;}
+.map-bubble.is-below{transform:translateY(10px);}
+.map-bubble::after{content:"";position:absolute;left:var(--ax,50%);bottom:-5px;width:10px;height:10px;
+  background:var(--surface);transform:translateX(-50%) rotate(45deg);}
+.map-bubble.is-below::after{bottom:auto;top:-5px;}
+.map-bubble-name{font-size:13px;font-weight:700;color:var(--ink);}
+.map-bubble-sub{font-size:10.5px;color:var(--ink-dim);margin-top:1px;}
+.map-bubble-sub:empty{display:none;}
+.map-list-row:hover{border-color:#b9c6d6;}
+.map-list-row.is-active:hover{border-color:var(--accent);}
+.map-hint-open{display:none;}
+.map-canvas{transform-origin:0 0;}
+.map-canvas.is-gliding{transition:transform .25s ease;}
+
+/* On a phone the diagram goes edge-to-edge for a bigger, easier target to
+   tap, and the how-to hint under it is left out. */
+@media (max-width:719.98px){
+  .map-canvas-wrap{margin-inline:-16px;border-radius:0;border-left:none;border-right:none;}
+  .map-canvas-wrap{overflow:hidden;}
+  .map-hint{display:none;}
+  /* the sticky page header spans the full width too, so the edge-to-edge
+     map never shows past its sides while scrolling underneath it */
+  #view-map .detail-header{margin-inline:-16px;padding-inline:16px;}
+  .map-canvas-wrap.is-zoomed{box-shadow:inset 0 0 0 2px rgba(31,63,102,.12);}
+  /* just enough room below the list for the sheet's own height, so the
+     end of the list can still be scrolled clear of it (no big empty gap;
+     the page already has 48px of bottom padding of its own) */
+  body.map-detail-open #view-map{padding-bottom:max(0px, calc(var(--map-sheet-h, 0px) - 36px));}
+}
 
 @media (min-width:720px){
   #app{max-width:1040px;}
@@ -207,8 +333,46 @@ img{max-width:100%;}
   .lb-top, .lb-content{max-width:1100px;}
   .lb-content .compare{height:min(78vh,860px);max-height:min(78vh,860px);}
   .gallery.gal-contain{height:min(78vh,860px);max-height:min(78vh,860px);}
-}
+  .map-canvas{max-width:860px;}
+  /* PC: diagram on the left (stays in view while the list scrolls), the
+     plain name list on the right, numbered to match the boxes. */
+  .map-layout{display:grid;grid-template-columns:minmax(0,1fr) 260px;column-gap:20px;align-items:start;
+    transition:grid-template-columns .4s cubic-bezier(.3,.7,.2,1), column-gap .4s cubic-bezier(.3,.7,.2,1);}
+  .map-side{min-width:0;overflow:hidden;transition:opacity .3s ease, visibility .3s;}
+  .map-list-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .map-main{position:sticky;top:12px;}
+  .map-side-title{margin-top:14px;}
+  .map-list-row{padding:8px 12px;}
+  .map-list-name{font-size:12.5px;}
 
+  /* PC, modelled on a mall floor guide: the map page gets the full width,
+     and an equipment's details open as a panel down the left edge instead
+     of a modal sheet, so the map stays visible and clickable — click
+     another box to switch, or an empty part of the map to close it. */
+  #app:has(#view-map:not([hidden])){max-width:1440px;}
+  .map-detail{inset:0 auto 0 0;width:300px;}
+  .map-detail-backdrop{display:none;}
+  .map-detail{right:auto;}
+  .map-detail-sheet{position:absolute;inset:0;max-width:none;max-height:none;margin:0;border-radius:0;
+    padding:60px 24px 28px;box-shadow:4px 0 24px rgba(0,0,0,.14);animation:mapPanelIn .4s cubic-bezier(.3,.7,.2,1);}
+  .map-detail.is-closing .map-detail-sheet{animation:mapPanelOut .32s cubic-bezier(.5,0,.75,.4) forwards;}
+  .map-detail-handle{display:none;}
+  .map-detail-close{top:16px;right:16px;width:34px;height:34px;}
+  .map-detail-name{font-size:21px;margin-right:0;}
+  .map-detail-rows{margin-top:18px;gap:0;border-top:1px solid var(--line);}
+  .map-detail-rows .row{padding:11px 2px;border-bottom:1px solid var(--line);}
+  body.map-detail-open .map-hint-default{display:none;}
+  body.map-detail-open .map-hint-open{display:inline;}
+}
+/* From 1200px wide the page makes room by easing its left padding in step
+   with the panel's slide, keeping the equipment list in view (the map keeps
+   its card height; at ~1470px and up the drawing itself doesn't shrink).
+   Narrower than that the panel sits over the left of the map instead, so
+   the map isn't squeezed small. */
+@media (min-width:1200px){
+  body{transition:padding-left .4s cubic-bezier(.3,.7,.2,1);}
+  body.map-detail-open{padding-left:300px;}
+}
 [hidden]{display:none!important;}
 </style>
 </head>
@@ -232,6 +396,7 @@ img{max-width:100%;}
       <div class="store-title-row">
         <h1 id="storeName"></h1>
         <button type="button" class="meeting-points-btn" id="meetingPointsBtn" hidden>整備箇所</button>
+        <button type="button" class="meeting-points-btn" id="machineMapBtn" hidden>機器マップ</button>
       </div>
       <div class="meta" id="storeMeta"></div>
     </header>
@@ -251,6 +416,37 @@ img{max-width:100%;}
     </header>
     <p class="price-view-sub">整備・清掃の基本料金と項目別の価格一覧です。店舗ごとの項目は打ち合わせ内容に基づきます。</p>
     <div id="priceContent"></div>
+  </div>
+
+  <div id="view-map" class="view" hidden>
+    <header class="detail-header">
+      <button class="back-btn" id="mapBackBtn">← 店舗に戻る</button>
+      <h1 id="mapStoreName"></h1>
+    </header>
+    <div class="map-floor-tabs" id="mapFloorTabs" hidden></div>
+    <div class="map-layout" id="mapLayout">
+      <div class="map-main">
+        <div class="map-canvas-wrap" id="mapCanvasWrap"><div class="map-canvas" id="mapCanvas"></div>
+          <div class="map-bubble" id="mapBubble"><div class="map-bubble-name"></div><div class="map-bubble-sub"></div></div>
+        </div>
+        <p class="map-hint"><span class="map-hint-default">機器をタップするとメーカー・型式・年式・シリアルNo.が表示されます。一覧からも選べます。</span><span class="map-hint-open">ヒント：図面の空いている所をクリックすると詳細を閉じます。</span></p>
+      </div>
+      <aside class="map-side">
+        <div class="map-side-title">機器一覧<span class="map-side-count" id="mapListCount"></span></div>
+        <div class="map-list" id="mapList"></div>
+      </aside>
+    </div>
+    <div class="state-box" id="mapEmptyMsg" hidden>この店舗の機器マップはまだ登録されていません。</div>
+  </div>
+
+  <div id="mapDetail" class="map-detail" hidden>
+    <div class="map-detail-backdrop" id="mapDetailBackdrop"></div>
+    <div class="map-detail-sheet" id="mapDetailSheet">
+      <div class="map-detail-handle"></div>
+      <button class="map-detail-close" id="mapDetailClose" aria-label="閉じる">×</button>
+      <div class="map-detail-name" id="mapDetailName"></div>
+      <div class="map-detail-rows" id="mapDetailRows"></div>
+    </div>
   </div>
 
   <div id="lightbox" class="lightbox" hidden>
@@ -280,14 +476,19 @@ img{max-width:100%;}
   var ITEMS = [];
   var MEETINGS = [];
   var PRICES = [];
+  var EQUIPMENT_MAP = [];
   var COMMON_PRICE_MAP = {};   // item_label -> {price, unit, note}
   var STORE_PRICE_MAP = {};    // store_id + "||" + item_label -> {price, unit, note}
   var currentStore = null;
   var currentDate = null;
+  var currentMapFloor = "";
+  var currentMapItems = [];   // equipment rows for the floor currently on screen
+  var currentMapSelected = -1; // index into currentMapItems of the selected equipment, or -1
 
   var viewList = document.getElementById("view-list");
   var viewStore = document.getElementById("view-store");
   var viewPrice = document.getElementById("view-price");
+  var viewMap = document.getElementById("view-map");
   var storeListEl = document.getElementById("storeList");
   var listStateEl = document.getElementById("listState");
   var storeStateEl = document.getElementById("storeState");
@@ -374,25 +575,38 @@ img{max-width:100%;}
 
   async function loadData(){
     listStateEl.innerHTML = '<div class="state-box">読み込み中です…</div>';
-    var ranges = ["stores!A1:Z2000","items!A1:Z2000","meeting_points!A1:Z2000","prices!A1:Z2000"].map(function(r){
-      return "ranges=" + encodeURIComponent(r);
-    }).join("&");
-    var url = "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "/values:batchGet?" + ranges + "&key=" + API_KEY;
+    // Spreadsheet tabs, in the order used below:
+    //   店舗 / 報告 / 店舗別打ち合わせ箇所 / 価格表 / 機器マップ
+    // (formerly stores / items / meeting_points / prices / equipment_map —
+    // if the Japanese-named tabs aren't found, the old names are tried, so the
+    // page keeps working while the tabs are being renamed).
+    var SHEET_TABS = ["店舗","報告","店舗別打ち合わせ箇所","価格表","機器マップ"];
+    var OLD_SHEET_TABS = ["stores","items","meeting_points","prices","equipment_map"];
+    var sheetsUrl = function(tabs){
+      return "https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "/values:batchGet?" +
+        tabs.map(function(t){ return "ranges=" + encodeURIComponent("'" + t + "'!A1:Z2000"); }).join("&") +
+        "&key=" + API_KEY;
+    };
     try{
-      var res = await fetch(url);
+      var res = await fetch(sheetsUrl(SHEET_TABS));
+      if(res.status === 400) res = await fetch(sheetsUrl(OLD_SHEET_TABS));
       if(!res.ok) throw new Error("HTTP " + res.status);
       var json = await res.json();
       var vr = json.valueRanges || [];
       STORES = rowsToObjects((vr[0]||{}).values);
       ITEMS = rowsToObjects((vr[1]||{}).values);
-      // meeting_points and prices are optional — older spreadsheets without
-      // those tabs just come back with an empty/missing range, which is fine
-      // (no points / no prices shown, nothing breaks).
+      // 店舗別打ち合わせ箇所, 価格表 and 機器マップ are optional — older
+      // spreadsheets without those tabs just come back with an empty/missing
+      // range, which is fine (no points / no prices / no map shown, nothing
+      // breaks).
       MEETINGS = rowsToObjects((vr[2]||{}).values);
       PRICES = rowsToObjects((vr[3]||{}).values);
+      EQUIPMENT_MAP = rowsToObjects((vr[4]||{}).values);
       buildPriceMaps();
       listStateEl.innerHTML = "";
       renderStores();
+      dataReady = true;
+      restoreView(bootState);
     }catch(err){
       listStateEl.innerHTML = '<div class="state-box error">データの読み込みに失敗しました。スプレッドシートの共有設定（リンクを知っている全員が閲覧可）と、Google Cloud ConsoleのAPIキーの許可ドメインに現在のサイトを追加しているかご確認ください。<br><br>詳細: ' + esc(err.message) + '</div>';
     }
@@ -412,13 +626,54 @@ img{max-width:100%;}
     return MEETINGS.filter(function(m){ return m.store_id === storeId; });
   }
 
+  // ---- machine map (俯瞰図) ----
+  // 「機器マップ」 sheet (formerly "equipment_map"): store_id, floor (blank = single floor), kind
+  // ("zone" = a simple rectangular labeled area like 客席/バックヤード,
+  // "outline" = an irregular wall shape — an L-shape, a notch cut out of a
+  // corner, … — traced as one continuous polygon via `points` so there's no
+  // double-border "seam" the way two touching zone rectangles would have,
+  // "entrance" = an 入口 door-swing icon (icon only, no text), anything
+  // else/blank = a piece of equipment), label (製品名), maker (メーカー),
+  // model (型式), year (年式), serial (シリアルNo.), note — all optional
+  // except label, and shown in the tap-to-open detail panel — x, y
+  // (equipment/entrance: center/top-left — see renderMapCanvas; zone:
+  // top-left corner as % of the canvas; outline: optional label position),
+  // w, h (box size as %; optional for equipment — blank just falls back to
+  // a small generic box), points
+  // (outline only: "x:y,x:y,x:y,…" polygon vertices in % of the canvas —
+  // always the FULL closed shape, used for the faint background tint so a
+  // notch is correctly excluded from it), walls (outline only, optional:
+  // one or more "x:y,x:y,…" chains separated by "|", each drawn as a solid
+  // wall line — any part of the shape not covered by a chain is left with
+  // no line at all, e.g. a notch that's simply open rather than a walled
+  // nook; leave blank to just stroke the whole `points` shape).
+  // Purely data-driven — adding a row and reloading the page is enough to
+  // place a new pin, no code change needed.
+  function equipmentMapForStore(storeId){
+    return EQUIPMENT_MAP.filter(function(r){ return r.store_id === storeId; });
+  }
+
+  function mapFloorsForStore(storeId){
+    var order = []; var seen = {};
+    equipmentMapForStore(storeId).forEach(function(r){
+      var f = (r.floor || "").trim();
+      if(!seen[f]){ seen[f] = true; order.push(f); }
+    });
+    return order;
+  }
+
+  function renderMachineMapButton(storeId){
+    var btn = document.getElementById("machineMapBtn");
+    btn.hidden = equipmentMapForStore(storeId).length === 0;
+  }
+
   // Always-visible reference list of the points agreed on with the client for
-  // this store (from the "meeting_points" sheet) — separate from the dated
+  // this store (from the 「店舗別打ち合わせ箇所」 sheet) — separate from the dated
   // before/after photo records below it.
   // The toggle button lives next to the store name (store-title-row); the
   // collapsible list itself (meetingPointsEl) sits below the header.
   // Same at every store, regardless of what the spreadsheet has — unlike the
-  // 店舗別項目 list below, which comes from the meeting_points sheet.
+  // 店舗別項目 list below, which comes from the 「店舗別打ち合わせ箇所」 sheet.
   var COMMON_MAINTENANCE_ITEMS = [
     "フード",
     "グリスフィルター/防火ダンパー",
@@ -541,6 +796,7 @@ img{max-width:100%;}
   }
 
   function openPriceList(){
+    saveViewState();
     history.pushState({view:"price"}, "", "#price");
     showPriceView();
   }
@@ -549,15 +805,522 @@ img{max-width:100%;}
     viewList.hidden = true;
     viewStore.hidden = true;
     viewPrice.hidden = false;
+    viewMap.hidden = true;
     renderPriceView();
     window.scrollTo(0,0);
+  }
+
+  // ---- machine map view ----
+  function openMachineMap(){
+    saveViewState();
+    history.pushState({view:"map", storeId: currentStore}, "", "#map=" + encodeURIComponent(currentStore));
+    showMapView(currentStore);
+  }
+
+  function showMapView(storeId){
+    var store = STORES.filter(function(s){ return s.store_id === storeId; })[0];
+    currentStore = storeId;
+    viewList.hidden = true;
+    viewStore.hidden = true;
+    viewPrice.hidden = true;
+    viewMap.hidden = false;
+    document.getElementById("mapStoreName").textContent = (store ? (store.store_name || storeId) : storeId) + " 機器マップ";
+
+    var floors = mapFloorsForStore(storeId);
+    var emptyEl = document.getElementById("mapEmptyMsg");
+    if(!floors.length){
+      emptyEl.hidden = false;
+      document.getElementById("mapFloorTabs").hidden = true;
+      document.getElementById("mapFloorTabs").innerHTML = "";
+      document.getElementById("mapLayout").hidden = true;
+      document.getElementById("mapCanvas").innerHTML = "";
+      document.getElementById("mapList").innerHTML = "";
+    }else{
+      emptyEl.hidden = true;
+      document.getElementById("mapLayout").hidden = false;
+      currentMapFloor = floors.indexOf(currentMapFloor) !== -1 ? currentMapFloor : floors[0];
+      renderMapFloorTabs(storeId, floors);
+      renderMapCanvas(storeId, currentMapFloor);
+    }
+    window.scrollTo(0,0);
+  }
+
+  function renderMapFloorTabs(storeId, floors){
+    var el = document.getElementById("mapFloorTabs");
+    if(floors.length <= 1){
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+    el.innerHTML = floors.map(function(f){
+      return '<button type="button" class="map-floor-tab'+(f===currentMapFloor?" is-active":"")+'" data-floor="'+esc(f)+'">'+esc(f||"フロア")+'</button>';
+    }).join("");
+    el.querySelectorAll(".map-floor-tab").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        currentMapFloor = btn.getAttribute("data-floor");
+        el.querySelectorAll(".map-floor-tab").forEach(function(b){ b.classList.remove("is-active"); });
+        btn.classList.add("is-active");
+        closeMapDetail();
+        renderMapCanvas(storeId, currentMapFloor);
+      });
+    });
+  }
+
+  // Clamped 0–100 percentage read from a sheet cell, with a fallback for
+  // blank/invalid values so one bad row never breaks the whole map.
+  function mapPct(v, fallback){
+    var n = parseFloat(v);
+    return isNaN(n) ? fallback : Math.max(0, Math.min(100, n));
+  }
+
+  // Simple architectural door-swing symbol (leaf + wall opening + swing arc)
+  // used for kind="entrance" rows, so 入口 reads as an entrance at a glance
+  // instead of just another labeled box.
+  var DOOR_SVG = '<svg viewBox="0 0 40 40" preserveAspectRatio="xMinYMin meet">' +
+    '<path d="M6 4 L6 34" stroke="#5b6676" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+    '<path d="M6 34 L34 34" stroke="#5b6676" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+    '<path d="M6 4 A30 30 0 0 1 34 34" stroke="#5b6676" stroke-width="1.5" fill="none" stroke-dasharray="3 3"/>' +
+    '</svg>';
+
+  // Door symbol from the entrance row's door / swing / hinge columns:
+  //   door  — 両開き (two leaves) or 片開き (one leaf, the default)
+  //   swing — which way it opens: 上 / 下 / 左 / 右 (the wall opening is on
+  //           the opposite side of the box)
+  //   hinge — for 片開き, which end the leaf hangs from: 左 / 右 for a door
+  //           opening up/down, 上 / 下 for one opening left/right
+  // Drawn as the open leaf/leaves plus the swing arc, kept in true
+  // proportion inside the row's box and pinned to the opening side. Rows
+  // without a swing keep the old generic icon.
+  function doorSvg(e){
+    var swing = String(e.swing || "").trim();
+    if (!/^[上下左右]$/.test(swing)) return DOOR_SVG;
+    var dbl = /両/.test(String(e.door || ""));
+    var hinge = String(e.hinge || "").trim();
+    var L = dbl ? 20 : 40;                 // leaf length; the opening is 40 long
+    var vertical = swing === "左" || swing === "右";
+    // (u along the opening 0..40, v out from it 0..L) -> SVG x,y
+    var map = function(u, v){
+      if (swing === "上") return [u, L - v];
+      if (swing === "下") return [u, v];
+      if (swing === "左") return [L - v, u];
+      return [v, u];
+    };
+    var leaves = dbl ? [[0, 1], [40, -1]]
+      : [(hinge === "右" || hinge === "下") ? [40, -1] : [0, 1]];
+    var parts = leaves.map(function(lf){
+      var uh = lf[0], dir = lf[1];
+      var a = map(uh, 0), b = map(uh, L);
+      var pts = [];
+      for (var i = 0; i <= 16; i++) {
+        var t = (Math.PI / 2) * i / 16;
+        var q = map(uh + dir * L * Math.sin(t), L * Math.cos(t));
+        pts.push(q[0].toFixed(2) + "," + q[1].toFixed(2));
+      }
+      return '<line class="map-door-leaf" x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" vector-effect="non-scaling-stroke"/>' +
+        '<polyline class="map-door-arc" points="'+pts.join(" ")+'" vector-effect="non-scaling-stroke"/>';
+    });
+    var vb = vertical ? "0 0 " + L + " 40" : "0 0 40 " + L;
+    var par = {"上": "xMidYMax", "下": "xMidYMin", "左": "xMaxYMid", "右": "xMinYMid"}[swing] + " meet";
+    return '<svg viewBox="'+vb+'" preserveAspectRatio="'+par+'">' + parts.join("") + '</svg>';
+  }
+
+  function renderMapCanvas(storeId, floor, keepSelection){
+    var canvas = document.getElementById("mapCanvas");
+    var rows = equipmentMapForStore(storeId).filter(function(r){ return (r.floor || "").trim() === floor; });
+    var kindOf = function(r){ return (r.kind || "").trim(); };
+    var zones = rows.filter(function(r){ return kindOf(r) === "zone"; });
+    var outlines = rows.filter(function(r){ return kindOf(r) === "outline"; });
+    var entrances = rows.filter(function(r){ return kindOf(r) === "entrance"; });
+    var sections = rows.filter(function(r){ return kindOf(r) === "section"; });
+    // anything that isn't a zone/outline/entrance/section row is a piece of equipment
+    var NON_EQUIP_KINDS = {"zone":1, "outline":1, "entrance":1, "section":1};
+    var items = rows.filter(function(r){ return !NON_EQUIP_KINDS[kindOf(r)]; });
+
+    // kind="section": splits one tab's map into labelled parts (e.g. a tab
+    // "2F・3F" showing both floors side by side) — a light frame with a
+    // heading tag in its top-left corner. x/y/w/h as for a zone.
+    var html = sections.map(function(sc){
+      var x = mapPct(sc.x,0), y = mapPct(sc.y,0), w = mapPct(sc.w,50), h = mapPct(sc.h,100);
+      return '<div class="map-section" style="left:'+x+'%;top:'+y+'%;width:'+w+'%;height:'+h+'%;">'+
+        '<div class="map-section-label">'+esc(sc.label||"")+'</div></div>';
+    }).join("");
+
+    html += zones.map(function(z){
+      var x = mapPct(z.x,0), y = mapPct(z.y,0), w = mapPct(z.w,20), h = mapPct(z.h,20);
+      return '<div class="map-zone" style="left:'+x+'%;top:'+y+'%;width:'+w+'%;height:'+h+'%;">'+
+        '<div class="map-zone-label">'+esc(z.label||"")+'</div></div>';
+    }).join("");
+
+    // A "wall" shape too irregular for a simple rectangle (an L-shape, a
+    // notch cut out of a corner, …) — one continuous outline traced as a
+    // single SVG polygon, so there's no double border/"seam" where separate
+    // rectangle zones would otherwise touch. `points` is "x:y,x:y,…" in %
+    // and is used for the filled tint (so a notch is correctly excluded).
+    // `walls` (optional) is the set of edges actually drawn as a solid wall
+    // line: one or more "x:y,x:y,…" chains separated by "|" — any edge of
+    // the shape that isn't part of a chain (e.g. the inner edges of a notch
+    // that's simply open, not a walled-off nook) is left undrawn. Omit it
+    // to just stroke the whole `points` polygon as before.
+    var outlinePtsToSvg = function(str){
+      return String(str||"").trim().split(",").map(function(p){
+        var xy = p.split(":");
+        return mapPct(xy[0],0) + "," + mapPct(xy[1],0);
+      }).join(" ");
+    };
+    html += outlines.map(function(o){
+      var pts = outlinePtsToSvg(o.points);
+      var labelHtml = o.label ? '<div class="map-zone-label" style="left:'+mapPct(o.x,0)+'%;top:'+mapPct(o.y,0)+'%;">'+esc(o.label)+'</div>' : "";
+      var wallsRaw = String(o.walls||"").trim();
+      var wallEl;
+      if(wallsRaw){
+        var d = wallsRaw.split("|").map(function(seg){
+          return "M " + outlinePtsToSvg(seg).split(" ").join(" L ");
+        }).join(" ");
+        wallEl = '<path class="map-outline-wall" d="'+d+'" vector-effect="non-scaling-stroke"/>';
+      } else {
+        wallEl = '<polygon class="map-outline-wall" points="'+pts+'" vector-effect="non-scaling-stroke"/>';
+      }
+      return '<svg class="map-outline-svg" viewBox="0 0 100 100" preserveAspectRatio="none">'+
+        '<polygon class="map-outline-fill" points="'+pts+'"/>' + wallEl +
+        '</svg>' + labelHtml;
+    }).join("");
+
+    // Icon only — no text label, so it reads as a plain architectural
+    // entrance mark rather than another named box.
+    html += entrances.map(function(e){
+      var x = mapPct(e.x,0), y = mapPct(e.y,0), w = mapPct(e.w,8), h = mapPct(e.h,14);
+      return '<div class="map-entrance" style="left:'+x+'%;top:'+y+'%;width:'+w+'%;height:'+h+'%;">'+
+        doorSvg(e) + '</div>';
+    }).join("");
+
+    // Equipment is drawn as a plain rectangle (positioned by its center
+    // point via x/y — w/h are optional and size it precisely like a real
+    // counter slot; left blank, it falls back to a small generic box) with
+    // just a small number inside matching its row in the list. Names aren't
+    // written on the diagram: they appear in a speech bubble when tapped,
+    // in the list, and in the detail panel, which keeps the drawing clean.
+    var boxesHtml = items.map(function(it, idx){
+      var x = mapPct(it.x,50), y = mapPct(it.y,50);
+      var sizeStyle = "";
+      if(String(it.w||"").trim() !== "") sizeStyle += "width:" + mapPct(it.w,10) + "%;";
+      if(String(it.h||"").trim() !== "") sizeStyle += "height:" + mapPct(it.h,9) + "%;";
+      return '<div class="map-equip" data-idx="'+idx+'" aria-label="'+esc(it.label||"")+'" style="left:'+x+'%;top:'+y+'%;'+sizeStyle+'">'+
+        '<span class="map-equip-badge">'+(idx+1)+'</span></div>';
+    });
+
+    html += boxesHtml.join("");
+
+    // A re-render just for a size change (window resize, the detail panel
+    // opening and shifting the page) keeps whatever was selected.
+    var keep = keepSelection ? currentMapSelected : -1;
+    canvas.innerHTML = html;
+    currentMapItems = items;
+    currentMapSelected = -1;
+    showMapBubble(-1);
+    // New floor/store: back to the whole-map view; a size-only re-render
+    // keeps the zoom, just re-clamped to the new size.
+    if (keepSelection) clampMapZoom(); else resetMapZoom();
+
+    canvas.querySelectorAll(".map-equip").forEach(function(el){
+      var idx = parseInt(el.getAttribute("data-idx"), 10);
+      el.addEventListener("click", function(){ selectMapEquip(idx, "map"); });
+    });
+
+    renderMapList(items, sections);
+
+    if (keep >= 0 && keep < items.length) applyMapSelection(keep, false);
+  }
+
+  // The equipment list under the map: same items as the boxes on the
+  // canvas, numbered to match the on-canvas badges, so either side can be
+  // used to find a piece of equipment on mobile and desktop alike.
+  function renderMapList(items, sections){
+    var el = document.getElementById("mapList");
+    document.getElementById("mapListCount").textContent = items.length ? "（" + items.length + "台）" : "";
+    if (!items.length) { el.innerHTML = '<div class="map-list-empty">このフロアには機器が登録されていません。</div>'; return; }
+    // When the map is split into sections (2F / 3F …), the list gets a small
+    // heading wherever the section changes, going by which section each
+    // box sits in.
+    var sectionOf = function(it){
+      var x = mapPct(it.x,50), y = mapPct(it.y,50);
+      for (var i = 0; i < (sections || []).length; i++) {
+        var sc = sections[i];
+        var sx = mapPct(sc.x,0), sy = mapPct(sc.y,0), sw = mapPct(sc.w,50), sh = mapPct(sc.h,100);
+        if (x >= sx && x <= sx + sw && y >= sy && y <= sy + sh) return sc.label || "";
+      }
+      return null;
+    };
+    var lastSection;
+    el.innerHTML = items.map(function(it, idx){
+      var head = "";
+      if (sections && sections.length) {
+        var sec = sectionOf(it);
+        if (sec !== lastSection && sec) head = '<div class="map-list-group">'+esc(sec)+'</div>';
+        lastSection = sec;
+      }
+      return head + '<button type="button" class="map-list-row" data-idx="'+idx+'">'+
+        '<span class="map-list-badge">'+(idx+1)+'</span>'+
+        '<span class="map-list-name">'+esc(it.label||"-")+'</span></button>';
+    }).join("");
+    el.querySelectorAll(".map-list-row").forEach(function(row){
+      var idx = parseInt(row.getAttribute("data-idx"), 10);
+      row.addEventListener("click", function(){ selectMapEquip(idx, "list"); });
+    });
+  }
+
+  // Speech-bubble callout above a box: product name, plus maker/model
+  // underneath when known. Flips below the box when there isn't room above
+  // it inside the map card. idx -1 hides it.
+  // It lives in the map card itself rather than in the (zoomable) drawing,
+  // so it stays the same size at any zoom and is re-placed after each
+  // pan/zoom.
+  var mapBubbleIdx = -1;
+  function showMapBubble(idx){
+    var canvas = document.getElementById("mapCanvas");
+    var wrap = document.getElementById("mapCanvasWrap");
+    var bubble = document.getElementById("mapBubble");
+    mapBubbleIdx = idx;
+    var item = currentMapItems[idx];
+    var box = item ? canvas.querySelector('.map-equip[data-idx="'+idx+'"]') : null;
+    var w = wrap.getBoundingClientRect(), r = box ? box.getBoundingClientRect() : null;
+    var ox = w.left + wrap.clientLeft, oy = w.top + wrap.clientTop;
+    var cw = wrap.clientWidth, ch = wrap.clientHeight;
+    var cx = r ? r.left - ox + r.width / 2 : 0, top = r ? r.top - oy : 0, bottom = r ? r.bottom - oy : 0;
+    // hidden when nothing's chosen, or when the box is panned out of view
+    if (!box || cx < 0 || cx > cw || bottom < 0 || top > ch) { bubble.classList.remove("is-shown"); return; }
+    bubble.querySelector(".map-bubble-name").textContent = item.label || "-";
+    bubble.querySelector(".map-bubble-sub").textContent =
+      [item.maker, item.model].filter(function(v){ return v; }).join(" ・ ");
+    bubble.classList.add("is-shown");
+    var below = top < bubble.offsetHeight + 16;
+    bubble.classList.toggle("is-below", below);
+    // Centre it on the box, but keep it inside the map's own width (a box
+    // near the edge would otherwise push it off-screen on a phone) and aim
+    // the little pointer back at the box.
+    var bw = bubble.offsetWidth;
+    var left = Math.max(6, Math.min(cw - bw - 6, cx - bw / 2));
+    bubble.style.left = left + "px";
+    bubble.style.setProperty("--ax", Math.max(12, Math.min(bw - 12, cx - left)) + "px");
+    bubble.style.top = (below ? bottom : top) + "px";
+  }
+
+  // ---- phone: pinch-zoom / drag the map itself (not the whole page) ----
+  // The drawing is scaled/moved with a CSS transform inside its card, which
+  // clips it. At normal size a one-finger swipe still scrolls the page as
+  // usual; two fingers zoom; once zoomed in, one finger drags the map.
+  var mapZoom = {s: 1, tx: 0, ty: 0};
+  var MAP_ZOOM_MAX = 4;
+  function isPhoneMap(){ return !window.matchMedia("(min-width:720px)").matches; }
+  function applyMapZoom(){
+    var canvas = document.getElementById("mapCanvas");
+    var wrap = document.getElementById("mapCanvasWrap");
+    canvas.style.transform = mapZoom.s === 1 ? "" :
+      "translate(" + mapZoom.tx + "px," + mapZoom.ty + "px) scale(" + mapZoom.s + ")";
+    wrap.style.touchAction = mapZoom.s > 1 ? "none" : "";
+    wrap.classList.toggle("is-zoomed", mapZoom.s > 1);
+    showMapBubble(mapBubbleIdx);
+  }
+  function clampMapZoom(){
+    var canvas = document.getElementById("mapCanvas");
+    if (!isPhoneMap()) { mapZoom = {s: 1, tx: 0, ty: 0}; applyMapZoom(); return; }
+    var W = canvas.offsetWidth, H = canvas.offsetHeight;
+    mapZoom.s = Math.max(1, Math.min(MAP_ZOOM_MAX, mapZoom.s));
+    mapZoom.tx = Math.min(0, Math.max(W - W * mapZoom.s, mapZoom.tx));
+    mapZoom.ty = Math.min(0, Math.max(H - H * mapZoom.s, mapZoom.ty));
+    applyMapZoom();
+  }
+  function resetMapZoom(){ mapZoom = {s: 1, tx: 0, ty: 0}; applyMapZoom(); }
+  // "Move to this box" glides rather than jumps; finger gestures stay
+  // instant. The bubble is re-placed once the glide ends.
+  var mapAnimTimer = null;
+  function glideMap(){
+    var canvas = document.getElementById("mapCanvas");
+    canvas.classList.add("is-gliding");
+    clearTimeout(mapAnimTimer);
+    mapAnimTimer = setTimeout(function(){
+      canvas.classList.remove("is-gliding");
+      showMapBubble(mapBubbleIdx);
+    }, 260);
+  }
+  // When zoomed in, slide the map so the given box is in the middle.
+  function panMapToEquip(idx){
+    if (mapZoom.s <= 1) return;
+    var canvas = document.getElementById("mapCanvas");
+    var box = canvas.querySelector('.map-equip[data-idx="'+idx+'"]');
+    if (!box) return;
+    var c = canvas.getBoundingClientRect(), r = box.getBoundingClientRect();
+    var lx = (r.left + r.width / 2 - c.left) / mapZoom.s, ly = (r.top + r.height / 2 - c.top) / mapZoom.s;
+    mapZoom.tx = canvas.offsetWidth / 2 - lx * mapZoom.s;
+    mapZoom.ty = canvas.offsetHeight / 2 - ly * mapZoom.s;
+    glideMap();
+    clampMapZoom();
+  }
+
+  // Highlights the box, its name label (when shown), its list row and its
+  // bubble together. Shared by clicks on either side and by re-renders.
+  function applyMapSelection(idx, scrollList){
+    currentMapSelected = idx;
+    var canvas = document.getElementById("mapCanvas");
+    canvas.querySelectorAll(".is-selected").forEach(function(el){ el.classList.remove("is-selected"); });
+    canvas.querySelectorAll('[data-idx="'+idx+'"]').forEach(function(el){ el.classList.add("is-selected"); });
+    var listEl = document.getElementById("mapList");
+    listEl.querySelectorAll(".is-active").forEach(function(el){ el.classList.remove("is-active"); });
+    var row = listEl.querySelector('.map-list-row[data-idx="'+idx+'"]');
+    if (row) {
+      row.classList.add("is-active");
+      if (scrollList) row.scrollIntoView({block:"nearest", behavior:"smooth"});
+    }
+    showMapBubble(idx);
+  }
+
+  // A tap on the map ("map") or on the list ("list"): select it and open
+  // its details. On PC a click on the map brings its row into view in the
+  // list alongside; on a phone the page never jumps down to the list —
+  // instead it only scrolls if needed so the chosen box sits in view above
+  // the sheet (which matters when it was picked from the list below).
+  function selectMapEquip(idx, from){
+    var item = currentMapItems[idx];
+    if (!item) return;
+    var isPc = window.matchMedia("(min-width:720px)").matches;
+    applyMapSelection(idx, isPc && from === "map");
+    openMapDetail(item);
+    if (!isPc) {
+      panMapToEquip(idx);   // when zoomed in, bring the chosen box to the middle
+      keepMapEquipInView(idx);
+    }
+  }
+
+  function keepMapEquipInView(idx){
+    var box = document.querySelector('#mapCanvas .map-equip[data-idx="'+idx+'"]');
+    var sheet = document.getElementById("mapDetailSheet");
+    if (!box || !sheet) return;
+    requestAnimationFrame(function(){
+      // Visible strip: below the sticky page header, above the sheet.
+      var header = document.querySelector("#view-map .detail-header");
+      var top = (header ? header.getBoundingClientRect().bottom : 0) + 8;
+      var bottom = window.innerHeight - sheet.offsetHeight - 12;
+      // Where the box sits on screen — when zoomed in it's being glided to
+      // the middle of the map, so use that spot rather than where it is
+      // mid-glide; otherwise only the part showing inside the map counts.
+      var b = box.getBoundingClientRect(), w = document.getElementById("mapCanvasWrap").getBoundingClientRect();
+      var r;
+      if (mapZoom.s > 1) {
+        var mid = w.top + w.height / 2, half = Math.min(b.height, w.height) / 2;
+        r = {top: mid - half, bottom: mid + half};
+      } else {
+        r = {top: Math.max(b.top, w.top), bottom: Math.min(b.bottom, w.bottom)};
+      }
+      r.height = Math.max(0, r.bottom - r.top);
+      var bubbleRoom = 60;  // the bubble sits above the box
+      if (r.top - bubbleRoom >= top && r.bottom <= bottom) return;
+      // Prefer bringing the whole map into that strip; if it's taller than
+      // the strip, centre the box in it instead.
+      var wrap = document.getElementById("mapCanvasWrap").getBoundingClientRect();
+      var dy = (wrap.height <= bottom - top)
+        ? wrap.top - top
+        : (r.top + r.height / 2) - (top + bottom) / 2;
+      window.scrollBy({top: dy, behavior: "smooth"});
+    });
+  }
+
+  // The drawing itself is all in % and resizes on its own; only the
+  // pixel-placed bits (the bubble, a phone zoom's pan limits) need nudging
+  // when the map's width changes — once per frame, so they keep up smoothly
+  // while the detail panel slides the page over.
+  if (window.ResizeObserver) {
+    // (a ResizeObserver callback runs after layout but before paint, so the
+    // bubble moves in the very same frame as the map — no lag)
+    var mapRO = new ResizeObserver(function(){
+      if (viewMap.hidden) return;
+      applyMapHeightLock();
+      clampMapZoom();
+    });
+    mapRO.observe(document.getElementById("mapCanvas"));
+    mapRO.observe(document.getElementById("mapCanvasWrap"));
+  }
+
+  function openMapDetail(item){
+    if(!item) return;
+    document.getElementById("mapDetailName").textContent = item.label || "-";
+    var rows = [];
+    if(item.maker) rows.push(["メーカー", item.maker]);
+    if(item.model) rows.push(["型式", item.model]);
+    if(item.year) rows.push(["年式", item.year]);
+    if(item.serial) rows.push(["シリアルNo.", item.serial]);
+    if(item.note) rows.push(["備考", item.note]);
+    document.getElementById("mapDetailRows").innerHTML = rows.length
+      ? rows.map(function(r){ return '<div class="row"><span class="k">'+esc(r[0])+'</span><span class="v">'+esc(r[1])+'</span></div>'; }).join("")
+      : '<div class="row"><span class="v">詳細情報はありません。</span></div>';
+    var panel = document.getElementById("mapDetail");
+    clearTimeout(mapDetailCloseTimer);
+    panel.classList.remove("is-closing");
+    document.getElementById("mapDetailSheet").style.transform = "";
+    panel.hidden = false;
+    lockMapHeight();
+    document.body.classList.add("map-detail-open");
+    // phone: the page gets bottom room matching the sheet's actual height
+    document.documentElement.style.setProperty("--map-sheet-h",
+      document.getElementById("mapDetailSheet").offsetHeight + "px");
+  }
+
+  // PC: while the detail panel is open (and while it slides in/out) the page
+  // narrows, which would make the 8:5 map — and everything below it — shrink
+  // and grow in height. Instead the map card keeps the height it had with the
+  // panel closed, and the drawing just scales down inside it (centred), so
+  // nothing moves up or down when opening/closing.
+  var mapLock = null, mapUnlockTimer = null;
+  function lockMapHeight(){
+    clearTimeout(mapUnlockTimer);
+    if (mapLock || !window.matchMedia("(min-width:1200px)").matches) return;
+    var wrap = document.getElementById("mapCanvasWrap"), canvas = document.getElementById("mapCanvas");
+    mapLock = {wrapH: wrap.offsetHeight, canvasH: canvas.offsetHeight};
+    applyMapHeightLock();
+  }
+  function applyMapHeightLock(){
+    if (!mapLock) return;
+    var wrap = document.getElementById("mapCanvasWrap"), canvas = document.getElementById("mapCanvas");
+    wrap.style.height = mapLock.wrapH + "px";
+    canvas.style.width = Math.min(wrap.clientWidth, mapLock.canvasH * 8 / 5) + "px";
+  }
+  function unlockMapHeight(){
+    mapLock = null;
+    document.getElementById("mapCanvasWrap").style.height = "";
+    document.getElementById("mapCanvas").style.width = "";
+  }
+
+  // Closing plays the slide-out first (the page eases back at the same
+  // time), then actually hides the panel.
+  var mapDetailCloseTimer = null;
+  function closeMapDetail(){
+    var panel = document.getElementById("mapDetail");
+    if (!panel.hidden && !panel.classList.contains("is-closing")) {
+      panel.classList.add("is-closing");
+      clearTimeout(mapDetailCloseTimer);
+      mapDetailCloseTimer = setTimeout(function(){
+        panel.hidden = true;
+        panel.classList.remove("is-closing");
+        document.getElementById("mapDetailSheet").style.transform = "";
+      }, 330);
+    }
+    document.body.classList.remove("map-detail-open");
+    // release the height lock only once the page has finished easing back
+    // to full width (its transition is .4s), when the map's natural height
+    // is the same again
+    clearTimeout(mapUnlockTimer);
+    if (mapLock) mapUnlockTimer = setTimeout(unlockMapHeight, 450);
+    currentMapSelected = -1;
+    document.querySelectorAll("#mapCanvas .is-selected, #mapList .is-active").forEach(function(el){
+      el.classList.remove("is-selected", "is-active");
+    });
+    showMapBubble(-1);
   }
 
   // ---- store list ----
   function renderStores(){
     var activeStores = STORES.filter(function(s){ return String(s.active).toUpperCase() !== "FALSE"; });
     if(!activeStores.length){
-      listStateEl.innerHTML = '<div class="state-box">店舗がまだ登録されていません。スプレッドシートの「stores」シートに行を追加してください。</div>';
+      listStateEl.innerHTML = '<div class="state-box">店舗がまだ登録されていません。スプレッドシートの「店舗」シートに行を追加してください。</div>';
       storeListEl.innerHTML = "";
       return;
     }
@@ -598,11 +1361,15 @@ img{max-width:100%;}
   // button, or the actual back button — all land back on the store list
   // through the popstate handler below, instead of just leaving the site.
   function openStore(storeId){
+    saveViewState();
     history.pushState({view:"store", storeId:storeId}, "", "#store=" + encodeURIComponent(storeId));
     showStoreView(storeId);
   }
 
-  function showStoreView(storeId){
+  // opts (optional, when coming back to a page after a reload or via the
+  // back button): {date, type, cat} — the visit date and filters to reopen on.
+  function showStoreView(storeId, opts){
+    opts = opts || {};
     var store = STORES.filter(function(s){ return s.store_id === storeId; })[0];
     if(!store) return;
     currentStore = storeId;
@@ -612,10 +1379,11 @@ img{max-width:100%;}
       '<div class="row"><span class="k">住所</span><span class="v">'+esc(store.address||"-")+'</span></div>'+
       '<div class="row"><span class="k">担当者</span><span class="v">'+esc(store.staff||"-")+'</span></div>';
     renderMeetingPoints(storeId);
+    renderMachineMapButton(storeId);
 
     var dates = visitDatesForStore(storeId);
     if(!dates.length){
-      storeStateEl.innerHTML = '<div class="state-box" style="margin-top:14px;">この店舗の実施実績はまだ登録されていません。「items」シートに行を追加すると、ここに表示されます。</div>';
+      storeStateEl.innerHTML = '<div class="state-box" style="margin-top:14px;">この店舗の実施実績はまだ登録されていません。「報告」シートに行を追加すると、ここに表示されます。</div>';
       itemListEl.innerHTML = "";
       chipsEl.innerHTML = "";
       datePickerEl.hidden = true;
@@ -625,11 +1393,11 @@ img{max-width:100%;}
       itemEmptyMsgEl.hidden = true;
     }else{
       storeStateEl.innerHTML = "";
-      currentDate = dates[0];
+      currentDate = (opts.date && dates.indexOf(opts.date) !== -1) ? opts.date : dates[0];
       if(dates.length > 1){
         datePickerEl.hidden = false;
         datePickerEl.innerHTML = dates.map(function(d,i){
-          return '<button class="chip'+(i===0?" is-active":"")+'" data-date="'+esc(d)+'">'+esc(d)+'</button>';
+          return '<button class="chip'+(d===currentDate?" is-active":"")+'" data-date="'+esc(d)+'">'+esc(d)+'</button>';
         }).join("");
         datePickerEl.querySelectorAll(".chip").forEach(function(chip){
           chip.addEventListener("click", function(){
@@ -647,14 +1415,16 @@ img{max-width:100%;}
         datePickerEl.hidden = true;
         datePickerEl.innerHTML = "";
       }
-      currentCatFilter = "all";
-      currentTypeFilter = "すべて";
+      currentCatFilter = opts.cat || "all";
+      currentTypeFilter = opts.type || "すべて";
       renderTypeTabs();
       renderChips();
       renderItems();
     }
 
     viewList.hidden = true;
+    viewPrice.hidden = true;
+    viewMap.hidden = true;
     viewStore.hidden = false;
     window.scrollTo(0,0);
   }
@@ -666,7 +1436,7 @@ img{max-width:100%;}
     itemsForStore(currentStore).forEach(function(it){ present[catKey(it.category)] = true; });
     var list = cats.filter(function(c){ return c==="all" || present[c]; });
     chipsEl.innerHTML = list.map(function(c){
-      return '<button class="chip'+(c==="all"?" is-active":"")+'" data-cat="'+c+'">'+labels[c]+'</button>';
+      return '<button class="chip'+(c===currentCatFilter?" is-active":"")+'" data-cat="'+c+'">'+labels[c]+'</button>';
     }).join("");
     chipsEl.querySelectorAll(".chip").forEach(function(chip){
       chip.addEventListener("click", function(){
@@ -1386,6 +2156,7 @@ img{max-width:100%;}
   function goBackToList(){
     viewStore.hidden = true;
     viewPrice.hidden = true;
+    viewMap.hidden = true;
     viewList.hidden = false;
     window.scrollTo(0,0);
   }
@@ -1397,6 +2168,101 @@ img{max-width:100%;}
   document.getElementById("backBtn").addEventListener("click", function(){ history.back(); });
   document.getElementById("priceBackBtn").addEventListener("click", function(){ history.back(); });
   document.getElementById("priceListBtn").addEventListener("click", openPriceList);
+  document.getElementById("mapBackBtn").addEventListener("click", function(){ history.back(); });
+  document.getElementById("machineMapBtn").addEventListener("click", openMachineMap);
+  document.getElementById("mapDetailClose").addEventListener("click", closeMapDetail);
+
+  // Phone map gestures: pinch to zoom (around the fingers), drag to move
+  // once zoomed in. A drag never counts as a tap on a box or on the map.
+  (function(){
+    var wrap = document.getElementById("mapCanvasWrap");
+    var g = null, justDragged = false;
+    function pt(t){ var w = wrap.getBoundingClientRect(); return {x: t.clientX - w.left, y: t.clientY - w.top}; }
+    function begin(e){
+      if (!isPhoneMap()) { g = null; return; }
+      if (e.touches.length >= 2) {
+        var a = pt(e.touches[0]), b = pt(e.touches[1]);
+        g = {mode: "pinch", d: Math.hypot(a.x - b.x, a.y - b.y) || 1, s: mapZoom.s,
+             mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, tx: mapZoom.tx, ty: mapZoom.ty, moved: true};
+      } else if (e.touches.length === 1 && mapZoom.s > 1) {
+        var p0 = pt(e.touches[0]);
+        g = {mode: "pan", x: p0.x, y: p0.y, tx: mapZoom.tx, ty: mapZoom.ty, moved: false};
+      } else {
+        g = null;
+      }
+    }
+    wrap.addEventListener("touchstart", begin, {passive: true});
+    wrap.addEventListener("touchmove", function(e){
+      if (!g) return;
+      if (g.mode === "pinch" && e.touches.length >= 2) {
+        e.preventDefault();
+        var a = pt(e.touches[0]), b = pt(e.touches[1]);
+        var d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        var s = Math.max(1, Math.min(MAP_ZOOM_MAX, g.s * d / g.d));
+        var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        // the drawing point that was under the fingers stays under them
+        var lx = (g.mx - g.tx) / g.s, ly = (g.my - g.ty) / g.s;
+        mapZoom.s = s; mapZoom.tx = mx - lx * s; mapZoom.ty = my - ly * s;
+        clampMapZoom();
+      } else if (g.mode === "pan" && e.touches.length === 1) {
+        var p = pt(e.touches[0]);
+        var dx = p.x - g.x, dy = p.y - g.y;
+        if (!g.moved && Math.hypot(dx, dy) < 6) return;
+        g.moved = true;
+        e.preventDefault();
+        mapZoom.tx = g.tx + dx; mapZoom.ty = g.ty + dy;
+        clampMapZoom();
+      }
+    }, {passive: false});
+    function end(e){
+      if (!g) return;
+      if (g.moved) justDragged = true;
+      // lifting one finger of a pinch carries on as a drag with the other
+      if (e.touches.length === 1 && g.mode === "pinch") { begin(e); if (g) g.moved = true; }
+      else if (!e.touches.length) g = null;
+    }
+    wrap.addEventListener("touchend", end);
+    wrap.addEventListener("touchcancel", end);
+    // swallow the click that a drag/pinch would otherwise produce
+    wrap.addEventListener("click", function(e){
+      if (justDragged) { justDragged = false; e.stopPropagation(); e.preventDefault(); }
+    }, true);
+    wrap.addEventListener("touchstart", function(){ justDragged = false; }, {passive: true, capture: true});
+  })();
+  // Phone: drag the sheet down to dismiss it (only when it's scrolled to
+  // its top, so a normal scroll inside a long sheet isn't mistaken for it).
+  (function(){
+    var sheet = document.getElementById("mapDetailSheet");
+    var startY = null, dy = 0;
+    sheet.addEventListener("touchstart", function(e){
+      if (window.matchMedia("(min-width:720px)").matches || sheet.scrollTop > 0) { startY = null; return; }
+      startY = e.touches[0].clientY; dy = 0;
+      sheet.classList.add("is-dragging");
+    }, {passive:true});
+    sheet.addEventListener("touchmove", function(e){
+      if (startY === null) return;
+      dy = Math.max(0, e.touches[0].clientY - startY);
+      sheet.style.transform = dy ? "translateY(" + dy + "px)" : "";
+    }, {passive:true});
+    function end(){
+      if (startY === null) return;
+      startY = null;
+      sheet.classList.remove("is-dragging");
+      // dragged far enough: slide out from where the finger left it;
+      // otherwise spring back up
+      if (dy > 70) closeMapDetail(); else sheet.style.transform = "";
+    }
+    sheet.addEventListener("touchend", end);
+    sheet.addEventListener("touchcancel", end);
+  })();
+  // Clicking an empty part of the map (not a box or its label) closes the
+  // detail panel — on PC the map stays clickable while the panel is open.
+  document.getElementById("mapCanvas").addEventListener("click", function(e){
+    if (!e.target.closest(".map-equip") && !document.getElementById("mapDetail").hidden) {
+      closeMapDetail();
+    }
+  });
+  document.getElementById("mapDetailBackdrop").addEventListener("click", closeMapDetail);
 
   // Swipe right to go back to the store list — touch only, and not when the
   // gesture starts on something that already scrolls/drags horizontally
@@ -1446,19 +2312,76 @@ img{max-width:100%;}
     viewStore.addEventListener("pointercancel", endSwipe);
   })();
 
-  // Baseline history entry for the list view, so the very first "back" from a
-  // store (however it's triggered) has somewhere defined to land.
-  history.replaceState({view:"list"}, "", location.pathname + location.search);
-
-  window.addEventListener("popstate", function(e){
-    var state = e.state;
-    if(state && state.view === "store" && state.storeId){
-      showStoreView(state.storeId);
-    }else if(state && state.view === "price"){
+  // ---- staying on the same page across a reload ----
+  // Each history entry carries what's on screen (which page, store, floor,
+  // visit date/filters, scroll position). It's written into the current
+  // entry just before leaving it — moving to another page, reloading,
+  // closing or backgrounding the tab — so a reload (which keeps the entry)
+  // or the back button reopens exactly that page where it was left.
+  function currentViewName(){
+    if (!viewMap.hidden) return "map";
+    if (!viewPrice.hidden) return "price";
+    if (!viewStore.hidden) return "store";
+    return "list";
+  }
+  function saveViewState(){
+    if (!dataReady) return;   // still loading: keep whatever the entry already says
+    var v = currentViewName();
+    var st = {view: v, scrollY: Math.round(window.scrollY || 0)};
+    if (v === "store" || v === "map") st.storeId = currentStore;
+    if (v === "map") st.floor = currentMapFloor;
+    if (v === "store") { st.date = currentDate; st.type = currentTypeFilter; st.cat = currentCatFilter; }
+    try { history.replaceState(st, "", location.href); } catch(e) {}
+  }
+  function stateFromHash(){
+    var h = location.hash || "", m;
+    if ((m = h.match(/^#store=(.+)$/))) return {view: "store", storeId: decodeURIComponent(m[1])};
+    if ((m = h.match(/^#map=(.+)$/))) return {view: "map", storeId: decodeURIComponent(m[1])};
+    if (h === "#price") return {view: "price"};
+    return {view: "list"};
+  }
+  // Show the page an entry describes, then put the scroll back.
+  function restoreView(st){
+    st = st || {view: "list"};
+    var known = function(id){ return STORES.some(function(s){ return s.store_id === id; }); };
+    if (st.view === "store" && known(st.storeId)) {
+      showStoreView(st.storeId, st);
+    } else if (st.view === "price") {
       showPriceView();
-    }else{
+    } else if (st.view === "map" && known(st.storeId)) {
+      if (st.floor) currentMapFloor = st.floor;
+      showMapView(st.storeId);
+    } else {
       goBackToList();
     }
+    if (st.scrollY) {
+      var y = st.scrollY;
+      requestAnimationFrame(function(){ window.scrollTo(0, y); });
+    }
+  }
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.addEventListener("pagehide", saveViewState);
+  window.addEventListener("beforeunload", saveViewState);
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState === "hidden") saveViewState();
+  });
+
+  // Which page to open once the data is in: after a reload, the entry still
+  // holds its state; a fresh visit to a link like …#store=xxx is read from
+  // the URL. In that fresh case the list goes underneath as the base entry,
+  // so "back" from the linked page still lands on the store list.
+  var dataReady = false;
+  var bootState = (history.state && history.state.view) ? history.state : stateFromHash();
+  if (!history.state || !history.state.view) {
+    var bootUrl = location.pathname + location.search + location.hash;
+    history.replaceState({view: "list"}, "", location.pathname + location.search);
+    if (bootState.view !== "list") history.pushState(bootState, "", bootUrl);
+  }
+
+  window.addEventListener("popstate", function(e){
+    // Leaving (or re-entering) the map never keeps an old detail panel open.
+    if (!document.getElementById("mapDetail").hidden) closeMapDetail();
+    restoreView(e.state);
   });
 
   loadData();
