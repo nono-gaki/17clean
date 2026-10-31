@@ -212,13 +212,15 @@ img{max-width:100%;}
 .map-canvas{position:relative;width:100%;aspect-ratio:8/5;background-color:var(--surface);
   container-type:inline-size;}
 .map-section{position:absolute;border:1px solid var(--line);border-radius:12px;pointer-events:none;}
-.map-section-label{position:absolute;top:8px;left:8px;padding:2px 10px;border-radius:999px;
-  background:var(--surface-2);color:var(--ink);font-weight:800;font-size:clamp(10.5px,1.9cqw,13px);
+.map-section-label{position:absolute;top:clamp(5px,1cqw,8px);left:clamp(5px,1cqw,8px);
+  padding:2px clamp(5px,1.2cqw,10px);border-radius:999px;white-space:nowrap;
+  background:var(--surface-2);color:var(--ink);font-weight:800;font-size:clamp(9px,1.9cqw,13px);
   letter-spacing:.02em;}
 .map-zone{position:absolute;border:1.5px dashed #b9c6d6;border-radius:8px;}
 .map-zone-label{position:absolute;top:clamp(4px,0.9375cqw,6px);left:clamp(6px,1.25cqw,8px);
   font-size:clamp(9.5px,1.71875cqw,11px);font-weight:700;color:var(--ink-dim);
   letter-spacing:.02em;pointer-events:none;}
+.map-zone-label.is-right{left:auto;right:clamp(6px,1.25cqw,8px);}
 .map-outline-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
 .map-outline-fill{fill:none;stroke:none;}
 .map-outline-wall{fill:none;stroke:#3a4452;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
@@ -240,6 +242,8 @@ img{max-width:100%;}
 .map-equip-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;color:var(--ink-dim);pointer-events:none;}
 .map-equip.is-selected .map-equip-badge{color:var(--accent-ink);}
+.map-equip.is-nested{min-width:0;min-height:0;}
+.map-equip.is-nested .map-equip-badge{font-size:clamp(9.5px,1.5cqw,11px);}
 .map-hint{margin-top:10px;font-size:11.5px;color:var(--ink-dim);}
 
 /* ---- machine map equipment list (both mobile & desktop) ---- */
@@ -371,7 +375,7 @@ img{max-width:100%;}
    the map isn't squeezed small. */
 @media (min-width:1200px){
   body{transition:padding-left .4s cubic-bezier(.3,.7,.2,1);}
-  body.map-detail-open{padding-left:300px;}
+  body.map-detail-open{padding-left:var(--map-shift, 300px);}
 }
 [hidden]{display:none!important;}
 </style>
@@ -946,10 +950,23 @@ img{max-width:100%;}
         '<div class="map-section-label">'+esc(sc.label||"")+'</div></div>';
     }).join("");
 
+    // The zone's name (客席 …) normally sits in its top-left corner; if a
+    // piece of equipment covers that corner it moves to the top-right
+    // instead, so the name is never hidden under a box.
+    var equipRects = items.map(function(it){
+      var ex = mapPct(it.x,50), ey = mapPct(it.y,50);
+      var ew = String(it.w||"").trim() !== "" ? mapPct(it.w,10) : 4, eh = String(it.h||"").trim() !== "" ? mapPct(it.h,9) : 4;
+      return {l: ex - ew/2, r: ex + ew/2, t: ey - eh/2, b: ey + eh/2};
+    });
+    var covered = function(l, r, t, b){
+      return equipRects.some(function(e){ return e.l < r && e.r > l && e.t < b && e.b > t; });
+    };
     html += zones.map(function(z){
       var x = mapPct(z.x,0), y = mapPct(z.y,0), w = mapPct(z.w,20), h = mapPct(z.h,20);
+      var lw = 2 + String(z.label||"").length * 1.8, lh = 6;   // rough label size, in % of the map
+      var right = covered(x, x + lw, y, y + lh) && !covered(x + w - lw, x + w, y, y + lh);
       return '<div class="map-zone" style="left:'+x+'%;top:'+y+'%;width:'+w+'%;height:'+h+'%;">'+
-        '<div class="map-zone-label">'+esc(z.label||"")+'</div></div>';
+        '<div class="map-zone-label'+(right ? ' is-right' : '')+'">'+esc(z.label||"")+'</div></div>';
     }).join("");
 
     // A "wall" shape too irregular for a simple rectangle (an L-shape, a
@@ -1000,13 +1017,67 @@ img{max-width:100%;}
     // just a small number inside matching its row in the list. Names aren't
     // written on the diagram: they appear in a speech bubble when tapped,
     // in the list, and in the detail panel, which keeps the drawing clean.
+    // A box that sits entirely on top of another one (e.g. 卓上コンロ on the
+    // 低温コールド) is drawn at its true size — never blown up to the minimum
+    // tap size, which on a phone would make it stick out past the box it sits
+    // on — and the box underneath moves its own number into the part that
+    // isn't covered, so both numbers stay readable.
+    var rectOf = function(it){
+      if (String(it.w||"").trim() === "" || String(it.h||"").trim() === "") return null;
+      var x = mapPct(it.x,50), y = mapPct(it.y,50), w = mapPct(it.w,10), h = mapPct(it.h,9);
+      return {l: x - w/2, r: x + w/2, t: y - h/2, b: y + h/2, w: w, h: h};
+    };
+    var rects = items.map(rectOf);
+    var parentOf = rects.map(function(rc, i){
+      if (!rc) return -1;
+      for (var j = 0; j < rects.length; j++) {
+        var p = rects[j];
+        if (j === i || !p || p.w * p.h <= rc.w * rc.h) continue;
+        if (rc.l >= p.l - 0.01 && rc.r <= p.r + 0.01 && rc.t >= p.t - 0.01 && rc.b <= p.b + 0.01) return j;
+      }
+      return -1;
+    });
+    // …but a nested box is also made a comfortable size to see and tap: at
+    // least 80% of the width of the box it sits on and a little taller,
+    // staying put near where it was and always kept inside that box.
+    rects = rects.map(function(rc, i){
+      var j = parentOf[i];
+      if (j < 0) return rc;
+      var p = rects[j];
+      var w = Math.max(rc.w, p.w * 0.8), h = Math.max(rc.h, Math.min(10, p.h * 0.5));
+      var m = Math.min(0.8, (p.w - w) / 2);
+      var cx = Math.max(p.l + m + w / 2, Math.min(p.r - m - w / 2, (rc.l + rc.r) / 2));
+      var t = Math.max(p.t + 0.8, Math.min(rc.t, p.b - 0.8 - h));
+      return {l: cx - w / 2, r: cx + w / 2, t: t, b: t + h, w: w, h: h};
+    });
     var boxesHtml = items.map(function(it, idx){
       var x = mapPct(it.x,50), y = mapPct(it.y,50);
       var sizeStyle = "";
       if(String(it.w||"").trim() !== "") sizeStyle += "width:" + mapPct(it.w,10) + "%;";
       if(String(it.h||"").trim() !== "") sizeStyle += "height:" + mapPct(it.h,9) + "%;";
-      return '<div class="map-equip" data-idx="'+idx+'" aria-label="'+esc(it.label||"")+'" style="left:'+x+'%;top:'+y+'%;'+sizeStyle+'">'+
-        '<span class="map-equip-badge">'+(idx+1)+'</span></div>';
+      if (parentOf[idx] >= 0) {
+        var nr = rects[idx];
+        x = +((nr.l + nr.r) / 2).toFixed(2); y = +((nr.t + nr.b) / 2).toFixed(2);
+        sizeStyle = "width:" + nr.w.toFixed(2) + "%;height:" + nr.h.toFixed(2) + "%;";
+      }
+      var cls = "map-equip" + (parentOf[idx] >= 0 ? " is-nested" : "");
+      // this box's own children: put its number in the uncovered part
+      var badgeStyle = "";
+      var kids = rects.filter(function(_, k){ return parentOf[k] === idx; });
+      if (kids.length && rects[idx]) {
+        var p = rects[idx], mid = (p.t + p.b) / 2;
+        var above = kids.every(function(k){ return (k.t + k.b) / 2 <= mid; });
+        var below = kids.every(function(k){ return (k.t + k.b) / 2 > mid; });
+        if (above) {
+          var kb = Math.max.apply(null, kids.map(function(k){ return k.b; }));
+          badgeStyle = ' style="top:' + ((kb - p.t) / p.h * 100).toFixed(1) + '%;"';
+        } else if (below) {
+          var kt = Math.min.apply(null, kids.map(function(k){ return k.t; }));
+          badgeStyle = ' style="bottom:' + ((p.b - kt) / p.h * 100).toFixed(1) + '%;"';
+        }
+      }
+      return '<div class="'+cls+'" data-idx="'+idx+'" aria-label="'+esc(it.label||"")+'" style="left:'+x+'%;top:'+y+'%;'+sizeStyle+'">'+
+        '<span class="map-equip-badge"'+badgeStyle+'>'+(idx+1)+'</span></div>';
     });
 
     html += boxesHtml.join("");
@@ -1131,6 +1202,15 @@ img{max-width:100%;}
     applyMapZoom();
   }
   function resetMapZoom(){ mapZoom = {s: 1, tx: 0, ty: 0}; applyMapZoom(); }
+  // Zoom to scale s keeping the point (px, py) — relative to the map card —
+  // fixed on screen.
+  function zoomMapAt(s, px, py){
+    var k = s / mapZoom.s;
+    mapZoom.tx = px - (px - mapZoom.tx) * k;
+    mapZoom.ty = py - (py - mapZoom.ty) * k;
+    mapZoom.s = s;
+    clampMapZoom();
+  }
   // "Move to this box" glides rather than jumps; finger gestures stay
   // instant. The bubble is re-placed once the glide ends.
   var mapAnimTimer = null;
@@ -1257,6 +1337,7 @@ img{max-width:100%;}
     panel.classList.remove("is-closing");
     document.getElementById("mapDetailSheet").style.transform = "";
     panel.hidden = false;
+    if (!document.body.classList.contains("map-detail-open")) setMapShift();
     lockMapHeight();
     document.body.classList.add("map-detail-open");
     // phone: the page gets bottom room matching the sheet's actual height
@@ -1270,6 +1351,18 @@ img{max-width:100%;}
   // panel closed, and the drawing just scales down inside it (centred), so
   // nothing moves up or down when opening/closing.
   var mapLock = null, mapUnlockTimer = null;
+  // How far the page slides over for the panel: as far as it can (up to the
+  // panel's 300px) *without* the map getting any narrower — i.e. the spare
+  // room around the drawing in its card, plus any margin outside the page's
+  // 1440px max width. Whatever's left over, the panel simply overlaps, so
+  // the drawing itself never shrinks.
+  function setMapShift(){
+    var wrap = document.getElementById("mapCanvasWrap"), canvas = document.getElementById("mapCanvas");
+    var slack = Math.max(0, wrap.clientWidth - canvas.offsetWidth);
+    var outside = Math.max(0, document.documentElement.clientWidth - 1440);
+    var shift = Math.max(0, Math.min(300, Math.floor(slack + outside)));
+    document.documentElement.style.setProperty("--map-shift", shift + "px");
+  }
   function lockMapHeight(){
     clearTimeout(mapUnlockTimer);
     if (mapLock || !window.matchMedia("(min-width:1200px)").matches) return;
@@ -2255,13 +2348,53 @@ img{max-width:100%;}
     sheet.addEventListener("touchend", end);
     sheet.addEventListener("touchcancel", end);
   })();
-  // Clicking an empty part of the map (not a box or its label) closes the
-  // detail panel — on PC the map stays clickable while the panel is open.
+  // A click/tap on the map that isn't on a box. On a phone, boxes are small
+  // for a fingertip, so a tap that lands just beside one (within ~8px of
+  // its edge) still picks the nearest box. Otherwise — a genuinely empty
+  // spot — it closes the detail panel (on PC the map stays clickable while
+  // the panel is open).
   document.getElementById("mapCanvas").addEventListener("click", function(e){
-    if (!e.target.closest(".map-equip") && !document.getElementById("mapDetail").hidden) {
-      closeMapDetail();
+    if (e.target.closest(".map-equip")) return;
+    if (isPhoneMap()) {
+      var best = -1, bestD = 8;
+      document.querySelectorAll("#mapCanvas .map-equip").forEach(function(el){
+        var r = el.getBoundingClientRect();
+        var dx = Math.max(r.left - e.clientX, 0, e.clientX - r.right);
+        var dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+        var d = Math.hypot(dx, dy);
+        if (d < bestD) { bestD = d; best = parseInt(el.getAttribute("data-idx"), 10); }
+      });
+      if (best >= 0) { selectMapEquip(best, "map"); return; }
     }
+    if (!document.getElementById("mapDetail").hidden) closeMapDetail();
   });
+
+  // Phone: double-tap the map to zoom in there (2.5×); double-tap again to
+  // go back to the whole map.
+  (function(){
+    var wrap = document.getElementById("mapCanvasWrap");
+    var t0 = null, last = null;
+    wrap.addEventListener("touchstart", function(e){
+      t0 = (e.touches.length === 1) ? {x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now()} : null;
+    }, {passive: true});
+    wrap.addEventListener("touchend", function(e){
+      if (!t0 || e.changedTouches.length !== 1 || !isPhoneMap()) { t0 = null; return; }
+      var p = e.changedTouches[0];
+      var isTap = Math.hypot(p.clientX - t0.x, p.clientY - t0.y) < 10 && Date.now() - t0.t < 300;
+      t0 = null;
+      if (!isTap) { last = null; return; }
+      var now = Date.now();
+      if (last && now - last.t < 320 && Math.hypot(p.clientX - last.x, p.clientY - last.y) < 30) {
+        last = null;
+        var w = wrap.getBoundingClientRect();
+        glideMap();
+        if (mapZoom.s < 1.5) zoomMapAt(2.5, p.clientX - w.left, p.clientY - w.top);
+        else resetMapZoom();
+      } else {
+        last = {x: p.clientX, y: p.clientY, t: now};
+      }
+    });
+  })();
   document.getElementById("mapDetailBackdrop").addEventListener("click", closeMapDetail);
 
   // Swipe right to go back to the store list — touch only, and not when the
